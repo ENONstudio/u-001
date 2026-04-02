@@ -2,477 +2,743 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <title>ボール転がしゲーム</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ボールゴールゲーム | ホーム</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-1: #07111f;
+      --bg-2: #10243d;
+      --accent: #ffd34d;
+      --accent-2: #49dcb1;
+      --text: #eef4ff;
+      --muted: #9fb4d1;
+      --panel: rgba(8, 16, 30, 0.72);
+    }
 
     body {
-      background: #0d0d1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: var(--text);
+      font-family: "Hiragino Sans", "Yu Gothic UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(73, 220, 177, 0.18), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(255, 211, 77, 0.14), transparent 28%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      overflow: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      border-radius: 999px;
+      pointer-events: none;
+      filter: blur(2px);
+      opacity: 0.38;
+    }
+
+    body::before {
+      width: 280px;
+      height: 280px;
+      top: 8%;
+      right: -80px;
+      background: radial-gradient(circle, rgba(255, 211, 77, 0.5), transparent 70%);
+      animation: floatA 9s ease-in-out infinite;
+    }
+
+    body::after {
+      width: 220px;
+      height: 220px;
+      left: -50px;
+      bottom: 6%;
+      background: radial-gradient(circle, rgba(73, 220, 177, 0.4), transparent 72%);
+      animation: floatB 11s ease-in-out infinite;
+    }
+
+    .hero {
+      width: min(920px, 100%);
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+    }
+
+    .main {
+      padding: 34px;
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
+      min-height: 520px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      gap: 8px;
       align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 12px;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      user-select: none;
-      -webkit-user-select: none;
-      overscroll-behavior: none;
-    }
-
-    #ui {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 24px;
-      margin-bottom: 12px;
-      color: #fff;
-      font-size: 18px;
-    }
-
-    #ui span strong {
-      color: #ffd700;
-      font-size: 22px;
-    }
-
-    button {
-      padding: 8px 18px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 15px;
-      font-weight: bold;
-      transition: opacity 0.15s;
-    }
-    button:hover { opacity: 0.8; }
-    #clearBtn  { background: #e94560; color: #fff; }
-    #undoBtn   { background: #4a90d9; color: #fff; }
-
-    #canvas {
-      border: 2px solid #2a3a5c;
-      border-radius: 10px;
-      cursor: crosshair;
-      display: block;
-      width: min(96vw, 960px);
-      height: auto;
-      max-height: 78vh;
-      touch-action: none;
-      box-shadow: 0 0 30px rgba(78,205,196,0.15);
-    }
-
-    #msg {
-      margin-top: 10px;
-      color: #aaa;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--accent);
       font-size: 14px;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.08em;
+    }
+
+    h1 {
+      margin-top: 18px;
+      font-size: clamp(42px, 6vw, 72px);
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+    }
+
+    .lead {
+      margin-top: 18px;
+      max-width: 26em;
+      color: var(--muted);
+      font-size: clamp(16px, 2.1vw, 18px);
+      line-height: 1.75;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 180px;
+      padding: 15px 20px;
+      border-radius: 16px;
+      text-decoration: none;
+      font-weight: 700;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #ffb347);
+      color: #1c1402;
+      box-shadow: 0 16px 30px rgba(255, 186, 71, 0.24);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .save-slot-btn {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      cursor: pointer;
+      min-width: 150px;
+    }
+
+    .save-slot-btn.active {
+      border-color: rgba(255, 211, 77, 0.5);
+      background: rgba(255, 211, 77, 0.15);
+      color: #ffe29a;
+    }
+
+    .slot-hint {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .stat {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 28px;
+      color: var(--accent-2);
+      margin-bottom: 6px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .side {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      justify-content: center;
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .card h2 {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .card p,
+    .card li {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .card ul {
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(73, 220, 177, 0.12);
+      color: var(--accent-2);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .gacha-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(3, 8, 18, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 40;
+    }
+
+    .gacha-modal.show {
+      display: flex;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .gacha-panel {
+      width: min(560px, 100%);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background:
+        radial-gradient(circle at top, rgba(255, 211, 77, 0.15), transparent 52%),
+        linear-gradient(150deg, #101f37, #0a1222);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      padding: 22px;
       text-align: center;
     }
 
-    @media (max-width: 820px) {
-      #ui {
-        gap: 10px;
-        font-size: 15px;
-        margin-bottom: 8px;
+    .gacha-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      margin-bottom: 16px;
+    }
+
+    .gacha-capsule {
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 24px 16px;
+      min-height: 190px;
+      display: grid;
+      place-items: center;
+      gap: 10px;
+    }
+
+    .gacha-rolling {
+      animation: pulse 0.6s ease-in-out infinite;
+    }
+
+    .gacha-item-emoji {
+      font-size: 52px;
+      line-height: 1;
+    }
+
+    .gacha-item-name {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0.01em;
+    }
+
+    .gacha-rarity {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    .rarity-normal {
+      color: #d6f1ff;
+      background: rgba(114, 190, 255, 0.18);
+      border-color: rgba(114, 190, 255, 0.45);
+    }
+
+    .rarity-rare {
+      color: #fff4ca;
+      background: rgba(255, 211, 77, 0.2);
+      border-color: rgba(255, 211, 77, 0.55);
+    }
+
+    .rarity-legend {
+      color: #ffe7ff;
+      background: rgba(255, 126, 239, 0.2);
+      border-color: rgba(255, 126, 239, 0.6);
+      box-shadow: 0 0 18px rgba(255, 126, 239, 0.28);
+    }
+
+    .gacha-sub {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .gacha-close {
+      margin-top: 16px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), #ffb347);
+      color: #1c1402;
+      font-weight: 800;
+      padding: 11px 16px;
+      min-width: 160px;
+      cursor: pointer;
+    }
+
+    .gacha-close:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.98); filter: brightness(1); }
+      50% { transform: scale(1.03); filter: brightness(1.12); }
+    }
+
+    @keyframes floatA {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(18px); }
+    }
+
+    @keyframes floatB {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-18px); }
+    }
+
+    @media (max-width: 860px) {
+      .hero {
+        grid-template-columns: 1fr;
       }
 
-      #ui span strong {
-        font-size: 18px;
+      .main {
+        min-height: auto;
       }
 
-      button {
-        padding: 8px 12px;
-        font-size: 14px;
-      }
-
-      #msg {
-        font-size: 12px;
+      .stats {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
+  <main class="hero">
+    <section class="panel main">
+      <div>
+        <div class="eyebrow">HOME SCREEN</div>
+        <h1>ボールを転がして<br>ゴールへ。</h1>
+        <p class="lead">線を引いて、落ちてくるボールのルートを作るアクションパズル。ステージごとにゴール位置と障害物が変わり、アイテム選択も使えます。</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="ボール入れゲーム１.html">ゲームを始める</a>
+          <a class="btn btn-secondary" href="shop.html">ショップへ</a>
+          <a class="btn btn-secondary" href="ボール入れゲーム１.html">続きから遊ぶ</a>
+          <button class="btn btn-secondary" id="gachaSlot1" type="button">🎲 スロット1ガチャ (30コイン)</button>
+          <button class="btn btn-secondary" id="gachaSlot2" type="button">🎲 スロット2ガチャ (30コイン)</button>
+          <button class="btn btn-secondary" id="gachaSlot3" type="button">🎲 スロット3ガチャ (30コイン)</button>
+          <button class="btn save-slot-btn" id="saveSlot1" type="button">セーブデータ1</button>
+          <button class="btn save-slot-btn" id="saveSlot2" type="button">セーブデータ2</button>
+          <button class="btn save-slot-btn" id="saveSlot3" type="button">セーブデータ3</button>
+        </div>
+        <p class="slot-hint" id="gachaHint">各セーブデータごとにガチャを引けます。</p>
+        <p class="slot-hint" id="slotHint">現在のスロット: 1</p>
+      </div>
 
-<div id="ui">
-  <span>スコア: <strong id="scoreEl">0</strong></span>
-  <span>ステージ: <strong id="stageEl">1</strong></span>
-  <span>ミス: <strong id="missEl">0</strong></span>
-  <button id="undoBtn">↩ 1本戻す</button>
-  <button id="clearBtn">🗑 全消し</button>
-</div>
+      <div class="stats">
+        <div class="stat">
+          <strong>10点</strong>
+          <span>ごとにステージが更新。ゴール位置も切り替わります。</span>
+        </div>
+        <div class="stat">
+          <strong>15ミス</strong>
+          <span>1ステージ内で到達するとゲームオーバーです。</span>
+        </div>
+        <div class="stat">
+          <strong>3種</strong>
+          <span>所持アイテムから好きな効果を選んで使えます。</span>
+        </div>
+      </div>
+    </section>
 
-<canvas id="canvas" width="960" height="540"></canvas>
-<p id="msg">マウスをドラッグして線を引き、ボールをゴールへ転がそう！</p>
+    <aside class="panel side">
+      <section class="card">
+        <div class="tag">HOW TO PLAY</div>
+        <h2>操作方法</h2>
+        <ul>
+          <li>ドラッグして線を描く</li>
+          <li>ボールをゴールに導く</li>
+          <li>アイテムは右パネルから選んで使用</li>
+        </ul>
+      </section>
 
-<script>
-const canvas = document.getElementById('canvas');
-const ctx    = canvas.getContext('2d');
-const scoreEl = document.getElementById('scoreEl');
-const stageEl = document.getElementById('stageEl');
-const missEl  = document.getElementById('missEl');
+      <section class="card">
+        <div class="tag">FEATURE</div>
+        <h2>このゲームの特徴</h2>
+        <p>動く邪魔者、ランダム出現アイテム、ステージごとの障害物配置変化に対応したホーム画面です。</p>
+      </section>
+    </aside>
+  </main>
 
-let score = 0, miss = 0, stage = 1;
-let lines = [];
-let balls = [];
-let particles = [];
-let isDrawing = false;
-let drawStart = null;
-let drawCurrent = null;
+  <div class="gacha-modal" id="gachaModal" aria-hidden="true">
+    <div class="gacha-panel" role="dialog" aria-modal="true" aria-labelledby="gachaTitle">
+      <h2 class="gacha-title" id="gachaTitle">ガチャ演出</h2>
+      <div class="gacha-capsule" id="gachaCapsule">
+        <div class="gacha-item-emoji" id="gachaEmoji">🎲</div>
+        <div class="gacha-rarity rarity-normal" id="gachaRarity">OPENING</div>
+        <div class="gacha-item-name" id="gachaName">抽選中...</div>
+        <p class="gacha-sub" id="gachaSub">カプセルを開いています...</p>
+      </div>
+      <button class="gacha-close" id="gachaClose" type="button" disabled>演出中...</button>
+    </div>
+  </div>
 
-/* ─── ゴール ─────────────────────────── */
-const GOAL_W = 140;
-const GOAL_H = 28;
-const goalSpots = [
-  { x: 40, y: 495 },
-  { x: 240, y: 495 },
-  { x: 430, y: 495 },
-  { x: 620, y: 495 },
-  { x: 810, y: 495 },
-  { x: 140, y: 460 },
-  { x: 370, y: 460 },
-  { x: 590, y: 460 },
-  { x: 780, y: 460 },
-  { x: 430, y: 425 }
-];
-let goalSpotIndex = 2;
-let GOAL = { x: goalSpots[goalSpotIndex].x, y: goalSpots[goalSpotIndex].y, w: GOAL_W, h: GOAL_H };
+  <script>
+    const ACTIVE_SLOT_KEY = 'ball-goal-active-slot';
+    const SAVE_PREFIX = 'ball-goal-game-save-v1-slot';
+    const NEXT_URL = 'stage-select.html';
+    const GACHA_COST = 30;
+    const GACHA_UNLOCK_ITEMS = [
+      { id: 'wallAssist', name: '🧱 ウォールサポート' },
+      { id: 'lineShield', name: '🧵 ラインシールド' },
+      { id: 'luckyDrop', name: '🍀 ラッキードロップ' },
+      { id: 'miniBall', name: '🔹 ミニボール' },
+      { id: 'scoreRush', name: '⚡ スコアラッシュ' },
+      { id: 'rainbowGoal', name: '🌈 レインボーゴール' },
+      { id: 'ballFreeze', name: '🧊 ボールフリーズ' }
+    ];
+    const BONUS_ITEM_POOL = [
+      { id: 'goalExpand', name: '⭐ ゴール拡大' },
+      { id: 'speedDown', name: '🐢 速度ダウン' },
+      { id: 'superGoal', name: '🎯 ゴール超拡大' },
+      { id: 'missGuard', name: '🛡 ミスガード' },
+      { id: 'obstacleSlow', name: '🧊 障害物スロー' },
+      { id: 'lineBoost', name: '📏 ラインブースト' },
+      { id: 'coinBoost', name: '🧲 コインブースト' },
+      { id: 'spawnBrake', name: '🚀 スポーンブレーキ' },
+      { id: 'obstacleClear', name: '💨 障害物クリア' },
+      { id: 'slowFall', name: '🪂 スローフォール' },
+      { id: 'wallAssist', name: '🧱 ウォールサポート' },
+      { id: 'lineShield', name: '🧵 ラインシールド' },
+      { id: 'luckyDrop', name: '🍀 ラッキードロップ' },
+      { id: 'miniBall', name: '🔹 ミニボール' },
+      { id: 'scoreRush', name: '⚡ スコアラッシュ' },
+      { id: 'rainbowGoal', name: '🌈 レインボーゴール' },
+      { id: 'ballFreeze', name: '🧊 ボールフリーズ' }
+    ];
+    const GACHA_RARITY = {
+      goalExpand: { label: 'Normal', css: 'rarity-normal' },
+      speedDown: { label: 'Normal', css: 'rarity-normal' },
+      superGoal: { label: 'Rare', css: 'rarity-rare' },
+      missGuard: { label: 'Normal', css: 'rarity-normal' },
+      obstacleSlow: { label: 'Rare', css: 'rarity-rare' },
+      lineBoost: { label: 'Normal', css: 'rarity-normal' },
+      coinBoost: { label: 'Rare', css: 'rarity-rare' },
+      spawnBrake: { label: 'Rare', css: 'rarity-rare' },
+      obstacleClear: { label: 'Rare', css: 'rarity-rare' },
+      slowFall: { label: 'Normal', css: 'rarity-normal' },
+      wallAssist: { label: 'Normal', css: 'rarity-normal' },
+      lineShield: { label: 'Normal', css: 'rarity-normal' },
+      luckyDrop: { label: 'Rare', css: 'rarity-rare' },
+      miniBall: { label: 'Normal', css: 'rarity-normal' },
+      scoreRush: { label: 'Rare', css: 'rarity-rare' },
+      rainbowGoal: { label: 'Legend', css: 'rarity-legend' },
+      ballFreeze: { label: 'Legend', css: 'rarity-legend' }
+    };
+    const gachaButtons = {
+      1: document.getElementById('gachaSlot1'),
+      2: document.getElementById('gachaSlot2'),
+      3: document.getElementById('gachaSlot3')
+    };
+    const gachaModal = document.getElementById('gachaModal');
+    const gachaCapsule = document.getElementById('gachaCapsule');
+    const gachaEmoji = document.getElementById('gachaEmoji');
+    const gachaRarity = document.getElementById('gachaRarity');
+    const gachaName = document.getElementById('gachaName');
+    const gachaSub = document.getElementById('gachaSub');
+    const gachaClose = document.getElementById('gachaClose');
+    let gachaAnimating = false;
 
-function updateStageAndGoal() {
-  const nextStage = Math.floor(score / 10) + 1;
-  if (nextStage <= stage) return;
+    function splitItemName(name) {
+      const parts = name.trim().split(' ');
+      if (parts.length <= 1) return { emoji: '🎁', label: name };
+      return { emoji: parts[0], label: parts.slice(1).join(' ') };
+    }
 
-  stage = nextStage;
-  stageEl.textContent = stage;
+    function showGachaModal() {
+      gachaModal.classList.add('show');
+      gachaModal.setAttribute('aria-hidden', 'false');
+    }
 
-  goalSpotIndex = (goalSpotIndex + 1) % goalSpots.length;
-  const nextSpot = goalSpots[goalSpotIndex];
-  GOAL = { x: nextSpot.x, y: nextSpot.y, w: GOAL_W, h: GOAL_H };
-}
+    function hideGachaModal() {
+      gachaModal.classList.remove('show');
+      gachaModal.setAttribute('aria-hidden', 'true');
+    }
 
-/* ─── パーティクル ─────────────────────── */
-function spawnParticles(x, y, color) {
-  for (let i = 0; i < 22; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 2 + Math.random() * 4;
-    particles.push({
-      x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      life: 1.0,
-      color,
-      r: 3 + Math.random() * 4
+    function setRarityBadge(itemId) {
+      const rarity = GACHA_RARITY[itemId] || { label: 'Normal', css: 'rarity-normal' };
+      gachaRarity.className = `gacha-rarity ${rarity.css}`;
+      gachaRarity.textContent = rarity.label;
+    }
+
+    async function playGachaAnimation(slot, lockedItems, unlockedItem, mode) {
+      showGachaModal();
+      gachaCapsule.classList.add('gacha-rolling');
+      gachaClose.disabled = true;
+      gachaClose.textContent = '演出中...';
+      gachaSub.textContent = `セーブデータ${slot}のカプセルを開いています...`;
+
+      let idx = 0;
+      const rollList = lockedItems.length ? lockedItems : BONUS_ITEM_POOL;
+      const rollTimer = setInterval(() => {
+        const current = rollList[idx % rollList.length];
+        const parsed = splitItemName(current.name);
+        gachaEmoji.textContent = parsed.emoji;
+        gachaName.textContent = parsed.label;
+        setRarityBadge(current.id);
+        idx += 1;
+      }, 95);
+
+      await new Promise(resolve => setTimeout(resolve, 1650));
+      clearInterval(rollTimer);
+
+      const finalParsed = splitItemName(unlockedItem.name);
+      gachaEmoji.textContent = finalParsed.emoji;
+      gachaName.textContent = finalParsed.label;
+      setRarityBadge(unlockedItem.id);
+      if (mode === 'bonus') {
+        gachaSub.textContent = `セーブデータ${slot}: 全解放ボーナス! 既存アイテムを10個獲得しました。`;
+      } else {
+        gachaSub.textContent = `セーブデータ${slot}: 新アイテム解放! 初回ボーナス3個を獲得しました。`;
+      }
+      gachaCapsule.classList.remove('gacha-rolling');
+      gachaClose.disabled = false;
+      gachaClose.textContent = '閉じる';
+    }
+
+    function getDefaultSaveData() {
+      return {
+        coins: 0,
+        itemStocks: {},
+        stageEffects: {
+          luckyDropStages: 0,
+          luckyDropStageMarker: null
+        },
+        unlockedItems: {
+          wallAssist: false,
+          lineShield: false,
+          luckyDrop: false,
+          miniBall: false,
+          scoreRush: false,
+          rainbowGoal: false,
+          ballFreeze: false
+        }
+      };
+    }
+
+    function loadSlotData(slot) {
+      const raw = localStorage.getItem(`${SAVE_PREFIX}${slot}`);
+      if (!raw) return getDefaultSaveData();
+      try {
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== 'object') return getDefaultSaveData();
+        if (!data.itemStocks || typeof data.itemStocks !== 'object') data.itemStocks = {};
+        if (!data.stageEffects || typeof data.stageEffects !== 'object') data.stageEffects = {};
+        if (!data.unlockedItems || typeof data.unlockedItems !== 'object') {
+          data.unlockedItems = {};
+        }
+        data.stageEffects.luckyDropStages = Number.isFinite(data.stageEffects.luckyDropStages)
+          ? Math.max(0, Math.floor(data.stageEffects.luckyDropStages))
+          : 0;
+        data.stageEffects.luckyDropStageMarker = Number.isInteger(data.stageEffects.luckyDropStageMarker)
+          ? data.stageEffects.luckyDropStageMarker
+          : null;
+        data.unlockedItems.wallAssist = !!data.unlockedItems.wallAssist;
+        data.unlockedItems.lineShield = !!data.unlockedItems.lineShield;
+        data.unlockedItems.luckyDrop = !!data.unlockedItems.luckyDrop;
+        data.unlockedItems.miniBall = !!data.unlockedItems.miniBall;
+        data.unlockedItems.scoreRush = !!data.unlockedItems.scoreRush;
+        data.unlockedItems.rainbowGoal = !!data.unlockedItems.rainbowGoal;
+        data.unlockedItems.ballFreeze = !!data.unlockedItems.ballFreeze;
+        data.coins = Number.isFinite(data.coins) ? Math.max(0, Math.floor(data.coins)) : 0;
+        return data;
+      } catch {
+        return getDefaultSaveData();
+      }
+    }
+
+    function saveSlotData(slot, data) {
+      localStorage.setItem(`${SAVE_PREFIX}${slot}`, JSON.stringify(data));
+    }
+
+    function getActiveSlot() {
+      const raw = Number(localStorage.getItem(ACTIVE_SLOT_KEY));
+      if (raw >= 1 && raw <= 3) return raw;
+      localStorage.setItem(ACTIVE_SLOT_KEY, '1');
+      return 1;
+    }
+
+    function summarizeSlot(slot) {
+      const data = loadSlotData(slot);
+      const unlockedCount = GACHA_UNLOCK_ITEMS.filter(item => data.unlockedItems[item.id]).length;
+      return `コイン${data.coins} / 解放${unlockedCount}`;
+    }
+
+    function renderSlotButtons() {
+      const active = getActiveSlot();
+      const hintEl = document.getElementById('slotHint');
+      const gachaHintEl = document.getElementById('gachaHint');
+      hintEl.textContent = `現在のスロット: ${active}`;
+      gachaHintEl.textContent = `ガチャ1回${GACHA_COST}コイン | 全解放後は既存アイテム10個ボーナスになります。`;
+
+      [1, 2, 3].forEach(slot => {
+        const data = loadSlotData(slot);
+        const locked = GACHA_UNLOCK_ITEMS.filter(item => !data.unlockedItems[item.id]);
+        const btn = document.getElementById(`saveSlot${slot}`);
+        btn.textContent = `セーブデータ${slot} (${summarizeSlot(slot)})`;
+        btn.classList.toggle('active', slot === active);
+
+        const gachaBtn = gachaButtons[slot];
+        if (gachaBtn) {
+          gachaBtn.disabled = gachaAnimating || data.coins < GACHA_COST;
+          if (locked.length === 0) {
+            gachaBtn.textContent = `🎲 スロット${slot}ボーナスガチャ (${GACHA_COST}コイン)`;
+          } else {
+            gachaBtn.textContent = `🎲 スロット${slot}ガチャ (${GACHA_COST}コイン)`;
+          }
+        }
+      });
+    }
+
+    [1, 2, 3].forEach(slot => {
+      const btn = document.getElementById(`saveSlot${slot}`);
+      btn.addEventListener('click', () => {
+        localStorage.setItem(ACTIVE_SLOT_KEY, String(slot));
+        renderSlotButtons();
+        window.location.href = NEXT_URL;
+      });
     });
-  }
-}
 
-/* ─── ボール クラス ────────────────────── */
-const BALL_RADIUS = 13;
-const GRAVITY     = 0.35;
-const FRICTION    = 0.988;
-const RESTITUTION = 0.42;
+    gachaClose.addEventListener('click', () => {
+      if (gachaClose.disabled) return;
+      hideGachaModal();
+    });
 
-class Ball {
-  constructor() {
-    this.x  = 60 + Math.random() * (canvas.width - 120);
-    this.y  = -BALL_RADIUS;
-    this.vx = (Math.random() - 0.5) * 2;
-    this.vy = 0;
-    this.r  = BALL_RADIUS;
-    this.active = true;
-    this.hue = Math.floor(Math.random() * 360);
-    this.color = `hsl(${this.hue},85%,60%)`;
-  }
+    gachaModal.addEventListener('click', e => {
+      if (e.target === gachaModal && !gachaClose.disabled) {
+        hideGachaModal();
+      }
+    });
 
-  update() {
-    if (!this.active) return;
+    async function runGachaForSlot(slot) {
+      if (gachaAnimating) return;
+      const data = loadSlotData(slot);
+      const locked = GACHA_UNLOCK_ITEMS.filter(item => !data.unlockedItems[item.id]);
+      if (data.coins < GACHA_COST) {
+        alert(`セーブデータ${slot}のコインが足りません。ガチャには30コイン必要です。`);
+        renderSlotButtons();
+        return;
+      }
 
-    this.vy += GRAVITY;
-    this.vx *= FRICTION;
-    this.x  += this.vx;
-    this.y  += this.vy;
-
-    /* 壁 */
-    if (this.x - this.r < 0) {
-      this.x = this.r;
-      this.vx = Math.abs(this.vx) * 0.7;
-    }
-    if (this.x + this.r > canvas.width) {
-      this.x = canvas.width - this.r;
-      this.vx = -Math.abs(this.vx) * 0.7;
-    }
-
-    /* 線との衝突 */
-    for (const ln of lines) collideSegment(this, ln);
-
-    /* ゴール判定 */
-    if (
-      this.y + this.r > GOAL.y &&
-      this.y - this.r < GOAL.y + GOAL.h &&
-      this.x > GOAL.x + 6 &&
-      this.x < GOAL.x + GOAL.w - 6
-    ) {
-      const goalYOnHit = GOAL.y;
-      this.active = false;
-      score++;
-      scoreEl.textContent = score;
-      updateStageAndGoal();
-      spawnParticles(this.x, goalYOnHit, this.color);
+      data.coins -= GACHA_COST;
+      let rewardItem;
+      let mode = 'unlock';
+      if (locked.length === 0) {
+        rewardItem = BONUS_ITEM_POOL[Math.floor(Math.random() * BONUS_ITEM_POOL.length)];
+        data.itemStocks[rewardItem.id] = (Number(data.itemStocks[rewardItem.id]) || 0) + 10;
+        mode = 'bonus';
+      } else {
+        rewardItem = locked[Math.floor(Math.random() * locked.length)];
+        data.unlockedItems[rewardItem.id] = true;
+        data.itemStocks[rewardItem.id] = (Number(data.itemStocks[rewardItem.id]) || 0) + 3;
+      }
+      saveSlotData(slot, data);
+      gachaAnimating = true;
+      renderSlotButtons();
+      await playGachaAnimation(slot, locked, rewardItem, mode);
+      gachaAnimating = false;
+      renderSlotButtons();
     }
 
-    /* 画面外（下） */
-    if (this.y - this.r > canvas.height) {
-      this.active = false;
-      miss++;
-      missEl.textContent = miss;
-    }
-  }
+    [1, 2, 3].forEach(slot => {
+      const btn = gachaButtons[slot];
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        runGachaForSlot(slot);
+      });
+    });
 
-  draw() {
-    if (!this.active) return;
-    ctx.save();
-    ctx.shadowColor  = this.color;
-    ctx.shadowBlur   = 14;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-
-    /* グラデーション */
-    const grd = ctx.createRadialGradient(
-      this.x - this.r * 0.3, this.y - this.r * 0.3, this.r * 0.1,
-      this.x, this.y, this.r
-    );
-    grd.addColorStop(0, `hsl(${this.hue},90%,80%)`);
-    grd.addColorStop(1, `hsl(${this.hue},85%,40%)`);
-
-    ctx.fillStyle = grd;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
-  }
-}
-
-/* ─── 線分との衝突検出 ──────────────────── */
-function collideSegment(ball, ln) {
-  const dx = ln.x2 - ln.x1;
-  const dy = ln.y2 - ln.y1;
-  const len2 = dx * dx + dy * dy;
-  if (len2 === 0) return;
-
-  const t = Math.max(0, Math.min(1,
-    ((ball.x - ln.x1) * dx + (ball.y - ln.y1) * dy) / len2
-  ));
-  const cx = ln.x1 + t * dx;
-  const cy = ln.y1 + t * dy;
-  const ex = ball.x - cx;
-  const ey = ball.y - cy;
-  const dist = Math.sqrt(ex * ex + ey * ey);
-
-  if (dist < ball.r && dist > 0) {
-    const nx = ex / dist;
-    const ny = ey / dist;
-
-    /* 押し出し */
-    const overlap = ball.r - dist;
-    ball.x += nx * overlap;
-    ball.y += ny * overlap;
-
-    /* 反射 */
-    const dot = ball.vx * nx + ball.vy * ny;
-    if (dot < 0) {
-      ball.vx -= (1 + RESTITUTION) * dot * nx;
-      ball.vy -= (1 + RESTITUTION) * dot * ny;
-      ball.vx *= 0.96;
-      ball.vy *= 0.96;
-    }
-  }
-}
-
-/* ─── 線を描画 ──────────────────────────── */
-function drawLines() {
-  ctx.lineCap  = 'round';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = 7;
-
-  for (const ln of lines) {
-    ctx.beginPath();
-    ctx.moveTo(ln.x1, ln.y1);
-    ctx.lineTo(ln.x2, ln.y2);
-    ctx.strokeStyle = '#4ecdc4';
-    ctx.shadowColor  = '#4ecdc4';
-    ctx.shadowBlur   = 8;
-    ctx.stroke();
-  }
-  ctx.shadowBlur = 0;
-
-  /* 描画中のプレビュー */
-  if (isDrawing && drawStart && drawCurrent) {
-    ctx.beginPath();
-    ctx.moveTo(drawStart.x, drawStart.y);
-    ctx.lineTo(drawCurrent.x, drawCurrent.y);
-    ctx.strokeStyle = 'rgba(78,205,196,0.45)';
-    ctx.lineWidth   = 7;
-    ctx.shadowBlur  = 0;
-    ctx.stroke();
-  }
-}
-
-/* ─── ゴール描画 ────────────────────────── */
-function drawGoal() {
-  const { x, y, w, h } = GOAL;
-
-  /* 内側 */
-  ctx.fillStyle = 'rgba(255,215,0,0.18)';
-  ctx.fillRect(x + 6, y, w - 12, h);
-
-  /* ゴール枠 */
-  ctx.strokeStyle = '#ffd700';
-  ctx.lineWidth   = 4;
-  ctx.shadowColor  = '#ffd700';
-  ctx.shadowBlur   = 12;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x, y + h);
-  ctx.moveTo(x + w, y);
-  ctx.lineTo(x + w, y + h);
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + w, y);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  /* ラベル */
-  ctx.fillStyle   = '#ffd700';
-  ctx.font        = 'bold 15px Arial';
-  ctx.textAlign   = 'center';
-  ctx.shadowColor = '#ffd700';
-  ctx.shadowBlur  = 8;
-  ctx.fillText('⚽ GOAL', x + w / 2, y + h - 5);
-  ctx.shadowBlur  = 0;
-  ctx.textAlign   = 'left';
-}
-
-/* ─── パーティクル描画 ────────────────────── */
-function updateParticles() {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.x  += p.vx;
-    p.y  += p.vy;
-    p.vy += 0.12;
-    p.life -= 0.028;
-    if (p.life <= 0) { particles.splice(i, 1); continue; }
-
-    ctx.globalAlpha = p.life;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-    ctx.fillStyle   = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur  = 6;
-    ctx.fill();
-    ctx.shadowBlur  = 0;
-    ctx.globalAlpha = 1;
-  }
-}
-
-/* ─── マウスイベント ────────────────────── */
-function getPos(e) {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width  / rect.width;
-  const scaleY = canvas.height / rect.height;
-  return {
-    x: (e.clientX - rect.left) * scaleX,
-    y: (e.clientY - rect.top)  * scaleY
-  };
-}
-
-canvas.addEventListener('mousedown', e => {
-  isDrawing   = true;
-  drawStart   = getPos(e);
-  drawCurrent = { ...drawStart };
-});
-
-canvas.addEventListener('mousemove', e => {
-  if (!isDrawing) return;
-  drawCurrent = getPos(e);
-});
-
-function endDraw() {
-  if (isDrawing && drawStart && drawCurrent) {
-    const dx = drawCurrent.x - drawStart.x;
-    const dy = drawCurrent.y - drawStart.y;
-    if (dx * dx + dy * dy > 100) {
-      lines.push({ x1: drawStart.x, y1: drawStart.y, x2: drawCurrent.x, y2: drawCurrent.y });
-    }
-  }
-  isDrawing   = false;
-  drawStart   = null;
-  drawCurrent = null;
-}
-
-canvas.addEventListener('mouseup',    endDraw);
-canvas.addEventListener('mouseleave', endDraw);
-
-/* タッチ対応 */
-canvas.addEventListener('touchstart', e => {
-  e.preventDefault();
-  isDrawing = true;
-  drawStart = getPos(e.touches[0]);
-  drawCurrent = { ...drawStart };
-}, { passive: false });
-
-canvas.addEventListener('touchmove', e => {
-  e.preventDefault();
-  if (!isDrawing) return;
-  drawCurrent = getPos(e.touches[0]);
-}, { passive: false });
-
-canvas.addEventListener('touchend', e => { e.preventDefault(); endDraw(); }, { passive: false });
-
-/* ─── ボタン ──────────────────────────── */
-document.getElementById('clearBtn').addEventListener('click', () => { lines = []; });
-document.getElementById('undoBtn').addEventListener('click', () => { lines.pop(); });
-
-/* ─── ボールを定期スポーン ──────────────── */
-setInterval(() => {
-  if (balls.filter(b => b.active).length < 4) {
-    balls.push(new Ball());
-  }
-}, 2800);
-balls.push(new Ball());
-
-/* ─── ゲームループ ────────────────────── */
-function loop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  /* 背景グリッド（薄） */
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-  ctx.lineWidth   = 1;
-  for (let gx = 0; gx < canvas.width; gx += 40) {
-    ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, canvas.height); ctx.stroke();
-  }
-  for (let gy = 0; gy < canvas.height; gy += 40) {
-    ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(canvas.width, gy); ctx.stroke();
-  }
-
-  /* スポーン表示 */
-  ctx.fillStyle   = 'rgba(255,255,255,0.15)';
-  ctx.font        = '13px Arial';
-  ctx.textAlign   = 'center';
-  ctx.fillText('▼ ボール落下エリア ▼', canvas.width / 2, 20);
-  ctx.textAlign   = 'left';
-
-  drawLines();
-  drawGoal();
-
-  balls = balls.filter(b => b.active || b.y < canvas.height + 40);
-  for (const b of balls) { b.update(); b.draw(); }
-
-  updateParticles();
-
-  requestAnimationFrame(loop);
-}
-
-loop();
-</script>
+    renderSlotButtons();
+  </script>
 </body>
 </html>

@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <title>ボール転がしゲーム</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0d0d1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: calc(10px + env(safe-area-inset-top)) 10px calc(12px + env(safe-area-inset-bottom));
+      font-family: 'Segoe UI', Arial, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      overscroll-behavior: none;
+    }
+
+    #layout {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 14px;
+      width: min(1280px, 100%);
+    }
+
+    #gameArea {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 0;
+      flex: 1;
+    }
+
+    #ui {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-bottom: 12px;
+      color: #fff;
+      font-size: 18px;
+    }
+
+    #ui span strong {
+      color: #ffd700;
+      font-size: 22px;
+    }
+
+    button {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+      transition: opacity 0.15s;
+      touch-action: manipulation;
+    }
+    button:hover { opacity: 0.8; }
+    #clearBtn  { background: #e94560; color: #fff; }
+    #undoBtn   { background: #4a90d9; color: #fff; }
+    #restartBtn { background: #43c17a; color: #fff; }
+    #shopBtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: bold;
+      text-decoration: none;
+      background: #ffb347;
+      color: #2b1800;
+      transition: opacity 0.15s;
+      touch-action: manipulation;
+    }
+    #shopBtn:hover { opacity: 0.8; }
+
+    .stock-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stock-row span {
+      margin-right: auto;
+    }
+
+    .use-btn {
+      padding: 4px 10px;
+      font-size: 13px;
+      background: #f2c94c;
+      color: #1b1b1b;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .use-btn:disabled {
+      background: #444;
+      color: #888;
+      cursor: default;
+    }
+
+    #canvas {
+      border: 2px solid #2a3a5c;
+      border-radius: 10px;
+      cursor: crosshair;
+      display: block;
+      width: min(96vw, 960px);
+      height: auto;
+      max-height: 78vh;
+      touch-action: none;
+      box-shadow: 0 0 30px rgba(78,205,196,0.15);
+    }
+
+    #msg {
+      margin-top: 10px;
+      color: #aaa;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+
+    #clearActions {
+      margin-top: 12px;
+      display: none;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .clear-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 170px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    #nextStageBtn {
+      background: #7dff8f;
+      color: #10280f;
+      border-color: rgba(125, 255, 143, 0.45);
+    }
+
+    #backHomeBtn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #eef4ff;
+    }
+
+    #itemPanel {
+      width: 240px;
+      min-height: 220px;
+      padding: 12px;
+      border: 2px solid #2a3a5c;
+      border-radius: 10px;
+      background: rgba(12, 17, 35, 0.72);
+      box-shadow: 0 0 30px rgba(78,205,196,0.08);
+      color: #d8e8ff;
+      flex-shrink: 0;
+    }
+
+    #itemPanel h2 {
+      color: #ffd700;
+      font-size: 16px;
+      margin-bottom: 8px;
+      letter-spacing: 0.6px;
+    }
+
+    #itemHint {
+      color: #93a2c7;
+      font-size: 12px;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    #itemList {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #itemList li {
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 215, 0, 0.35);
+      border-radius: 7px;
+      background: rgba(255, 215, 0, 0.08);
+      color: #ffe7a8;
+      font-size: 14px;
+    }
+
+    #effectList {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    #effectList li {
+      padding: 6px 10px;
+      border: 1px solid rgba(120, 180, 255, 0.25);
+      border-radius: 7px;
+      background: rgba(120, 180, 255, 0.05);
+      color: #b0c8e8;
+      font-size: 13px;
+      transition: color 0.3s;
+    }
+
+    @media (max-width: 820px) {
+      body {
+        justify-content: flex-start;
+      }
+
+      #layout {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #gameArea {
+        width: 100%;
+      }
+
+      #ui {
+        gap: 10px;
+        font-size: 15px;
+        margin-bottom: 8px;
+        position: sticky;
+        top: env(safe-area-inset-top);
+        z-index: 20;
+        width: 100%;
+        background: rgba(8, 12, 26, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 8px 10px;
+        backdrop-filter: blur(8px);
+      }
+
+      #ui span strong {
+        font-size: 18px;
+      }
+
+      button {
+        padding: 10px 14px;
+        font-size: 14px;
+        min-height: 44px;
+      }
+
+      #shopBtn {
+        min-height: 44px;
+        padding: 10px 14px;
+      }
+
+      .use-btn {
+        min-height: 38px;
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+
+      #canvas {
+        width: 100%;
+        max-height: 52vh;
+        border-width: 1px;
+      }
+
+      #msg {
+        font-size: 12px;
+      }
+
+      #itemPanel {
+        width: min(96vw, 960px);
+        min-height: auto;
+        max-height: 34vh;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      #itemList li,
+      #effectList li {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="ui">
+  <span>スコア: <strong id="scoreEl">0</strong></span>
+  <span>ステージ: <strong id="stageEl">1</strong></span>
+  <span>ミス: <strong id="missEl">0</strong></span>
+  <span>コイン: <strong id="coinEl">0</strong></span>
+  <span>アイテム: <strong id="itemEl">—</strong></span>
+  <a id="shopBtn" href="shop.html">🛒 ショップへ</a>
+  <button id="restartBtn">↻ リスタート</button>
+  <button id="undoBtn">↩ 1本戻す</button>
+  <button id="clearBtn">🗑 全消し</button>
+</div>
+
+<div id="layout">
+  <div id="gameArea">
+    <canvas id="canvas" width="960" height="540"></canvas>
+    <p id="msg">マウスをドラッグして線を引き、ボールをゴールへ転がそう！</p>
+    <div id="clearActions">
+      <a id="nextStageBtn" class="clear-action-btn" href="stage-select.html">次のステージへ</a>
+      <a id="backHomeBtn" class="clear-action-btn" href="index.html">ホーム画面に戻る</a>
+    </div>
+  </div>
+
+  <aside id="itemPanel" aria-label="取得アイテム">
+    <h2>所持アイテム</h2>
+    <p id="itemHint">ミス5回以内でステージ突破 → ゴール拡大ゲット。キャンバス上のアイテムにボールを当てると在庫に追加。好きなときに「使う」を押して発動！</p>
+    <ul id="itemList">
+      <li class="stock-row">⭐ ゴール拡大 x<span id="goalStockEl">0</span><button class="use-btn" data-item="goalExpand">使う</button></li>
+      <li class="stock-row">🐢 速度ダウン x<span id="speedDownStockEl">0</span><button class="use-btn" data-item="speedDown">使う</button></li>
+      <li class="stock-row">🎯 ゴール超拡大 x<span id="superGoalStockEl">0</span><button class="use-btn" data-item="superGoal">使う</button></li>
+      <li class="stock-row">🛡 ミスガード x<span id="missGuardStockEl">0</span><button class="use-btn" data-item="missGuard">使う</button></li>
+      <li class="stock-row">🧊 障害物スロー x<span id="obstacleSlowStockEl">0</span><button class="use-btn" data-item="obstacleSlow">使う</button></li>
+      <li class="stock-row">📏 ラインブースト x<span id="lineBoostStockEl">0</span><button class="use-btn" data-item="lineBoost">使う</button></li>
+      <li class="stock-row">🧲 コインブースト x<span id="coinBoostStockEl">0</span><button class="use-btn" data-item="coinBoost">使う</button></li>
+      <li class="stock-row">🚀 スポーンブレーキ x<span id="spawnBrakeStockEl">0</span><button class="use-btn" data-item="spawnBrake">使う</button></li>
+      <li class="stock-row">💨 障害物クリア x<span id="obstacleClearStockEl">0</span><button class="use-btn" data-item="obstacleClear">使う</button></li>
+      <li class="stock-row">🪂 スローフォール x<span id="slowFallStockEl">0</span><button class="use-btn" data-item="slowFall">使う</button></li>
+      <li class="stock-row" data-unlock-item="wallAssist" style="display:none">🧱 ウォールサポート x<span id="wallAssistStockEl">0</span><button class="use-btn" data-item="wallAssist">使う</button></li>
+      <li class="stock-row" data-unlock-item="lineShield" style="display:none">🧵 ラインシールド x<span id="lineShieldStockEl">0</span><button class="use-btn" data-item="lineShield">使う</button></li>
+      <li class="stock-row" data-unlock-item="luckyDrop" style="display:none">🍀 ラッキードロップ x<span id="luckyDropStockEl">0</span><button class="use-btn" data-item="luckyDrop">使う</button></li>
+      <li class="stock-row" data-unlock-item="miniBall" style="display:none">🔹 ミニボール x<span id="miniBallStockEl">0</span><button class="use-btn" data-item="miniBall">使う</button></li>
+      <li class="stock-row" data-unlock-item="scoreRush" style="display:none">⚡ スコアラッシュ x<span id="scoreRushStockEl">0</span><button class="use-btn" data-item="scoreRush">使う</button></li>
+      <li class="stock-row" data-unlock-item="rainbowGoal" style="display:none">🌈 レインボーゴール x<span id="rainbowGoalStockEl">0</span><button class="use-btn" data-item="rainbowGoal">使う</button></li>
+      <li class="stock-row" data-unlock-item="ballFreeze" style="display:none">🧊 ボールフリーズ x<span id="ballFreezeStockEl">0</span><button class="use-btn" data-item="ballFreeze">使う</button></li>
+    </ul>
+    <h2 style="margin-top:12px">エフェクト</h2>
+    <ul id="effectList">
+      <li id="speedDownStatus">🐢 速度ダウン: <span>なし</span></li>
+      <li id="superGoalStatus">🎯 ゴール超拡大: <span>なし</span></li>
+      <li id="goalExpandStatus">⭐ ゴール拡大: <span>なし</span></li>
+      <li id="missGuardStatus">🛡 ミスガード: <span>なし</span></li>
+      <li id="obstacleSlowStatus">🧊 障害物スロー: <span>なし</span></li>
+      <li id="lineBoostStatus">📏 ラインブースト: <span>なし</span></li>
+      <li id="coinBoostStatus">🧲 コインブースト: <span>なし</span></li>
+      <li id="spawnBrakeStatus">🚀 スポーンブレーキ: <span>なし</span></li>
+      <li id="obstacleClearStatus">💨 障害物クリア: <span>なし</span></li>
+      <li id="slowFallStatus">🪂 スローフォール: <span>なし</span></li>
+      <li id="wallAssistStatus" data-unlock-item="wallAssist" style="display:none">🧱 ウォールサポート: <span>なし</span></li>
+      <li id="lineShieldStatus" data-unlock-item="lineShield" style="display:none">🧵 ラインシールド: <span>なし</span></li>
+      <li id="luckyDropStatus" data-unlock-item="luckyDrop" style="display:none">🍀 ラッキードロップ: <span>なし</span></li>
+      <li id="miniBallStatus" data-unlock-item="miniBall" style="display:none">🔹 ミニボール: <span>なし</span></li>
+      <li id="scoreRushStatus" data-unlock-item="scoreRush" style="display:none">⚡ スコアラッシュ: <span>なし</span></li>
+      <li id="rainbowGoalStatus" data-unlock-item="rainbowGoal" style="display:none">🌈 レインボーゴール: <span>なし</span></li>
+      <li id="ballFreezeStatus" data-unlock-item="ballFreeze" style="display:none">🧊 ボールフリーズ: <span>なし</span></li>
+    </ul>
+  </aside>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+const scoreEl = document.getElementById('scoreEl');
+const stageEl = document.getElementById('stageEl');
+const missEl  = document.getElementById('missEl');
+const coinEl  = document.getElementById('coinEl');
+const itemEl  = document.getElementById('itemEl');
+const msgEl   = document.getElementById('msg');
+const clearActionsEl = document.getElementById('clearActions');
+const nextStageBtn = document.getElementById('nextStageBtn');
+const restartBtn = document.getElementById('restartBtn');
+const goalStockEl     = document.getElementById('goalStockEl');
+const speedDownStockEl = document.getElementById('speedDownStockEl');
+const superGoalStockEl = document.getElementById('superGoalStockEl');
+const missGuardStockEl = document.getElementById('missGuardStockEl');
+const obstacleSlowStockEl = document.getElementById('obstacleSlowStockEl');
+const lineBoostStockEl = document.getElementById('lineBoostStockEl');
+const coinBoostStockEl = document.getElementById('coinBoostStockEl');
+const spawnBrakeStockEl = document.getElementById('spawnBrakeStockEl');
+const obstacleClearStockEl = document.getElementById('obstacleClearStockEl');
+const slowFallStockEl = document.getElementById('slowFallStockEl');
+const wallAssistStockEl = document.getElementById('wallAssistStockEl');
+const lineShieldStockEl = document.getElementById('lineShieldStockEl');
+const luckyDropStockEl = document.getElementById('luckyDropStockEl');
+const miniBallStockEl = document.getElementById('miniBallStockEl');
+const scoreRushStockEl = document.getElementById('scoreRushStockEl');
+const rainbowGoalStockEl = document.getElementById('rainbowGoalStockEl');
+const ballFreezeStockEl = document.getElementById('ballFreezeStockEl');
+
+const SAVE_KEY_PREFIX = 'ball-goal-game-save-v1-slot';
+const ACTIVE_SLOT_KEY = 'ball-goal-active-slot';
+
+function getSelectedStageFromQuery() {
+  const stageParam = Number(new URLSearchParams(window.location.search).get('stage'));
+  if (!Number.isInteger(stageParam)) return 1;
+  return Math.max(1, Math.min(30, stageParam));
+}
+
+function getSelectedSlotFromQuery() {
+  const slotParam = Number(new URLSearchParams(window.location.search).get('slot'));
+  if (!Number.isInteger(slotParam)) return null;
+  return slotParam >= 1 && slotParam <= 3 ? slotParam : null;
+}
+
+const selectedStage = getSelectedStageFromQuery();
+const selectedSlot = getSelectedSlotFromQuery();
+if (selectedSlot !== null) {
+  localStorage.setItem(ACTIVE_SLOT_KEY, String(selectedSlot));
+}
+
+let score = 0, miss = 0, stage = selectedStage, coins = 0;
+let lines = [];
+let balls = [];
+let particles = [];
+let isDrawing = false;
+let drawStart = null;
+let drawCurrent = null;
+let stageStartMiss = 0;
+let goalExpandItemActive = false;
+let isGameOver = false;
+let isGameClear = false;
+const itemStocks = { goalExpand: 0, speedDown: 0, superGoal: 0, missGuard: 0, obstacleSlow: 0, lineBoost: 0, coinBoost: 0, spawnBrake: 0, obstacleClear: 0, slowFall: 0, wallAssist: 0, lineShield: 0, luckyDrop: 0, miniBall: 0, scoreRush: 0, rainbowGoal: 0, ballFreeze: 0 };
+let pickupItems = [];
+const activeEffects = { speedDown: 0, superGoal: 0, obstacleSlow: 0, lineBoost: 0, spawnBrake: 0, obstacleClear: 0, slowFall: 0, wallAssist: 0, lineShield: 0, luckyDrop: 0, miniBall: 0, scoreRush: 0, ballFreeze: 0 };
+let missGuardCharges = 0;
+let coinBoostStageActive = false;
+let rainbowGoalStageActive = false;
+let luckyDropStages = 0;
+let luckyDropStageMarker = null;
+const unlockedItems = { wallAssist: false, lineShield: false, luckyDrop: false, miniBall: false, scoreRush: false, rainbowGoal: false, ballFreeze: false };
+
+function getActiveSlot() {
+  const raw = Number(localStorage.getItem(ACTIVE_SLOT_KEY));
+  if (raw >= 1 && raw <= 3) return raw;
+  localStorage.setItem(ACTIVE_SLOT_KEY, '1');
+  return 1;
+}
+
+function getStorageKey() {
+  return `${SAVE_KEY_PREFIX}${getActiveSlot()}`;
+}
+
+function savePersistentState() {
+  localStorage.setItem(getStorageKey(), JSON.stringify({
+    coins,
+    itemStocks: {
+      goalExpand: itemStocks.goalExpand,
+      speedDown: itemStocks.speedDown,
+      superGoal: itemStocks.superGoal,
+      missGuard: itemStocks.missGuard,
+      obstacleSlow: itemStocks.obstacleSlow,
+      lineBoost: itemStocks.lineBoost,
+      coinBoost: itemStocks.coinBoost,
+      spawnBrake: itemStocks.spawnBrake,
+      obstacleClear: itemStocks.obstacleClear,
+      slowFall: itemStocks.slowFall,
+      wallAssist: itemStocks.wallAssist,
+      lineShield: itemStocks.lineShield,
+      luckyDrop: itemStocks.luckyDrop,
+      miniBall: itemStocks.miniBall,
+      scoreRush: itemStocks.scoreRush,
+      rainbowGoal: itemStocks.rainbowGoal,
+      ballFreeze: itemStocks.ballFreeze
+    },
+    unlockedItems: {
+      wallAssist: unlockedItems.wallAssist,
+      lineShield: unlockedItems.lineShield,
+      luckyDrop: unlockedItems.luckyDrop,
+      miniBall: unlockedItems.miniBall,
+      scoreRush: unlockedItems.scoreRush,
+      rainbowGoal: unlockedItems.rainbowGoal,
+      ballFreeze: unlockedItems.ballFreeze
+    },
+    stageEffects: {
+      luckyDropStages,
+      luckyDropStageMarker
+    }
+  }));
+}
+
+function loadPersistentState() {
+  const raw = localStorage.getItem(getStorageKey());
+  if (!raw) return;
+
+  let shouldResave = false;
+
+  try {
+    const data = JSON.parse(raw);
+    coins = Number.isFinite(data.coins) ? Math.max(0, Math.floor(data.coins)) : 0;
+    itemStocks.goalExpand = Number.isFinite(data.itemStocks?.goalExpand) ? Math.max(0, Math.floor(data.itemStocks.goalExpand)) : 0;
+    itemStocks.speedDown = Number.isFinite(data.itemStocks?.speedDown) ? Math.max(0, Math.floor(data.itemStocks.speedDown)) : 0;
+    itemStocks.superGoal = Number.isFinite(data.itemStocks?.superGoal) ? Math.max(0, Math.floor(data.itemStocks.superGoal)) : 0;
+    itemStocks.missGuard = Number.isFinite(data.itemStocks?.missGuard) ? Math.max(0, Math.floor(data.itemStocks.missGuard)) : 0;
+    itemStocks.obstacleSlow = Number.isFinite(data.itemStocks?.obstacleSlow) ? Math.max(0, Math.floor(data.itemStocks.obstacleSlow)) : 0;
+    itemStocks.lineBoost = Number.isFinite(data.itemStocks?.lineBoost) ? Math.max(0, Math.floor(data.itemStocks.lineBoost)) : 0;
+    itemStocks.coinBoost = Number.isFinite(data.itemStocks?.coinBoost) ? Math.max(0, Math.floor(data.itemStocks.coinBoost)) : 0;
+    itemStocks.spawnBrake = Number.isFinite(data.itemStocks?.spawnBrake) ? Math.max(0, Math.floor(data.itemStocks.spawnBrake)) : 0;
+    itemStocks.obstacleClear = Number.isFinite(data.itemStocks?.obstacleClear) ? Math.max(0, Math.floor(data.itemStocks.obstacleClear)) : 0;
+    itemStocks.slowFall = Number.isFinite(data.itemStocks?.slowFall) ? Math.max(0, Math.floor(data.itemStocks.slowFall)) : 0;
+    itemStocks.wallAssist = Number.isFinite(data.itemStocks?.wallAssist) ? Math.max(0, Math.floor(data.itemStocks.wallAssist)) : 0;
+    itemStocks.lineShield = Number.isFinite(data.itemStocks?.lineShield) ? Math.max(0, Math.floor(data.itemStocks.lineShield)) : 0;
+    itemStocks.luckyDrop = Number.isFinite(data.itemStocks?.luckyDrop) ? Math.max(0, Math.floor(data.itemStocks.luckyDrop)) : 0;
+    itemStocks.miniBall = Number.isFinite(data.itemStocks?.miniBall) ? Math.max(0, Math.floor(data.itemStocks.miniBall)) : 0;
+    itemStocks.scoreRush = Number.isFinite(data.itemStocks?.scoreRush) ? Math.max(0, Math.floor(data.itemStocks.scoreRush)) : 0;
+    itemStocks.rainbowGoal = Number.isFinite(data.itemStocks?.rainbowGoal) ? Math.max(0, Math.floor(data.itemStocks.rainbowGoal)) : 0;
+    itemStocks.ballFreeze = Number.isFinite(data.itemStocks?.ballFreeze) ? Math.max(0, Math.floor(data.itemStocks.ballFreeze)) : 0;
+    unlockedItems.wallAssist = !!data.unlockedItems?.wallAssist;
+    unlockedItems.lineShield = !!data.unlockedItems?.lineShield;
+    unlockedItems.luckyDrop = !!data.unlockedItems?.luckyDrop;
+    unlockedItems.miniBall = !!data.unlockedItems?.miniBall;
+    unlockedItems.scoreRush = !!data.unlockedItems?.scoreRush;
+    unlockedItems.rainbowGoal = !!data.unlockedItems?.rainbowGoal;
+    unlockedItems.ballFreeze = !!data.unlockedItems?.ballFreeze;
+
+    luckyDropStages = Number.isFinite(data.stageEffects?.luckyDropStages)
+      ? Math.max(0, Math.floor(data.stageEffects.luckyDropStages))
+      : 0;
+    luckyDropStageMarker = Number.isInteger(data.stageEffects?.luckyDropStageMarker)
+      ? data.stageEffects.luckyDropStageMarker
+      : null;
+
+    if (luckyDropStages > 0) {
+      if (Number.isInteger(luckyDropStageMarker) && luckyDropStageMarker !== stage) {
+        luckyDropStages = Math.max(0, luckyDropStages - 1);
+        shouldResave = true;
+      }
+      luckyDropStageMarker = stage;
+      shouldResave = true;
+    }
+  } catch {
+    coins = 0;
+    itemStocks.goalExpand = 0;
+    itemStocks.speedDown = 0;
+    itemStocks.superGoal = 0;
+    itemStocks.missGuard = 0;
+    itemStocks.obstacleSlow = 0;
+    itemStocks.lineBoost = 0;
+    itemStocks.coinBoost = 0;
+    itemStocks.spawnBrake = 0;
+    itemStocks.obstacleClear = 0;
+    itemStocks.slowFall = 0;
+    itemStocks.wallAssist = 0;
+    itemStocks.lineShield = 0;
+    itemStocks.luckyDrop = 0;
+    itemStocks.miniBall = 0;
+    itemStocks.scoreRush = 0;
+    itemStocks.rainbowGoal = 0;
+    itemStocks.ballFreeze = 0;
+    unlockedItems.wallAssist = false;
+    unlockedItems.lineShield = false;
+    unlockedItems.luckyDrop = false;
+    unlockedItems.miniBall = false;
+    unlockedItems.scoreRush = false;
+    unlockedItems.rainbowGoal = false;
+    unlockedItems.ballFreeze = false;
+    luckyDropStages = 0;
+    luckyDropStageMarker = null;
+  }
+  applyUnlockVisibility();
+  if (shouldResave) {
+    savePersistentState();
+  }
+}
+
+function applyUnlockVisibility() {
+  document.querySelectorAll('[data-unlock-item]').forEach(el => {
+    const key = el.dataset.unlockItem;
+    el.style.display = unlockedItems[key] ? '' : 'none';
+  });
+}
+
+function updateCoinUI() {
+  coinEl.textContent = coins;
+}
+
+function updateClearActionButtons() {
+  if (!isGameClear) {
+    clearActionsEl.style.display = 'none';
+    return;
+  }
+
+  clearActionsEl.style.display = 'flex';
+  const nextStage = stage + 1;
+  const slot = getActiveSlot();
+
+  if (nextStage <= 30) {
+    nextStageBtn.textContent = `次のステージへ (Stage ${nextStage})`;
+    nextStageBtn.href = `ボール入れゲーム１.html?stage=${nextStage}&slot=${slot}`;
+  } else {
+    nextStageBtn.textContent = 'ステージ選択へ';
+    nextStageBtn.href = 'stage-select.html';
+  }
+}
+
+function getCurrentStageMisses() {
+  return miss - stageStartMiss;
+}
+
+function triggerGameOver() {
+  isGameOver = true;
+  coinBoostStageActive = false;
+  rainbowGoalStageActive = false;
+  isDrawing = false;
+  drawStart = null;
+  drawCurrent = null;
+  msgEl.textContent = `ゲームオーバー: ステージ${stage}で15ミスしました。`;
+  refreshItemUI();
+  refreshEffectUI();
+  updateClearActionButtons();
+}
+
+function triggerGameClear() {
+  isGameClear = true;
+  coinBoostStageActive = false;
+  rainbowGoalStageActive = false;
+  isDrawing = false;
+  drawStart = null;
+  drawCurrent = null;
+  msgEl.textContent = `ゲームクリア! ステージ${stage}を10ゴール達成!`;
+  refreshItemUI();
+  refreshEffectUI();
+  updateClearActionButtons();
+}
+
+function restartGame() {
+  const wasStopped = isGameOver || isGameClear;
+  score = 0;
+  miss = 0;
+  stage = selectedStage;
+  stageStartMiss = 0;
+  isGameOver = false;
+  isGameClear = false;
+  isDrawing = false;
+  drawStart = null;
+  drawCurrent = null;
+  goalExpandItemActive = false;
+  setGoalSpotForStage();
+  balls = [new Ball()];
+  lines = [];
+  particles = [];
+  pickupItems = [];
+  activeEffects.speedDown = 0;
+  activeEffects.superGoal = 0;
+  activeEffects.obstacleSlow = 0;
+  activeEffects.lineBoost = 0;
+  activeEffects.spawnBrake = 0;
+  activeEffects.obstacleClear = 0;
+  activeEffects.slowFall = 0;
+  activeEffects.wallAssist = 0;
+  activeEffects.lineShield = 0;
+  activeEffects.luckyDrop = 0;
+  activeEffects.miniBall = 0;
+  activeEffects.scoreRush = 0;
+  activeEffects.ballFreeze = 0;
+  luckyDropStages = 0;
+  luckyDropStageMarker = null;
+  coinBoostStageActive = false;
+  rainbowGoalStageActive = false;
+  missGuardCharges = 0;
+
+  scoreEl.textContent = score;
+  missEl.textContent = miss;
+  stageEl.textContent = stage;
+  updateCoinUI();
+  msgEl.textContent = 'マウスをドラッグして線を引き、ボールをゴールへ転がそう！';
+
+  updateGoalAtCurrentSpot();
+  refreshItemUI();
+  refreshEffectUI();
+  updateClearActionButtons();
+  if (wasStopped) {
+    loop();
+  }
+}
+
+function refreshItemUI() {
+  goalStockEl.textContent     = itemStocks.goalExpand;
+  speedDownStockEl.textContent = itemStocks.speedDown;
+  superGoalStockEl.textContent = itemStocks.superGoal;
+  missGuardStockEl.textContent = itemStocks.missGuard;
+  obstacleSlowStockEl.textContent = itemStocks.obstacleSlow;
+  lineBoostStockEl.textContent = itemStocks.lineBoost;
+  coinBoostStockEl.textContent = itemStocks.coinBoost;
+  spawnBrakeStockEl.textContent = itemStocks.spawnBrake;
+  obstacleClearStockEl.textContent = itemStocks.obstacleClear;
+  slowFallStockEl.textContent = itemStocks.slowFall;
+  wallAssistStockEl.textContent = itemStocks.wallAssist;
+  lineShieldStockEl.textContent = itemStocks.lineShield;
+  luckyDropStockEl.textContent = itemStocks.luckyDrop;
+  miniBallStockEl.textContent = itemStocks.miniBall;
+  scoreRushStockEl.textContent = itemStocks.scoreRush;
+  rainbowGoalStockEl.textContent = itemStocks.rainbowGoal;
+  ballFreezeStockEl.textContent = itemStocks.ballFreeze;
+  const total = itemStocks.goalExpand + itemStocks.speedDown + itemStocks.superGoal + itemStocks.missGuard + itemStocks.obstacleSlow + itemStocks.lineBoost + itemStocks.coinBoost + itemStocks.spawnBrake + itemStocks.obstacleClear + itemStocks.slowFall + itemStocks.wallAssist + itemStocks.lineShield + itemStocks.luckyDrop + itemStocks.miniBall + itemStocks.scoreRush + itemStocks.rainbowGoal + itemStocks.ballFreeze;
+  itemEl.textContent = `計${total}個`;
+
+  document.querySelectorAll('.use-btn').forEach(btn => {
+    const key = btn.dataset.item;
+    btn.disabled = isGameOver || isGameClear
+      || itemStocks[key] <= 0
+      || (key === 'goalExpand' && goalExpandItemActive)
+      || (key === 'coinBoost' && coinBoostStageActive)
+      || (key === 'rainbowGoal' && rainbowGoalStageActive)
+      || (key !== 'goalExpand' && key !== 'missGuard' && activeEffects[key] > Date.now());
+  });
+}
+function refreshEffectUI() {
+  const now = Date.now();
+  const sdEl = document.getElementById('speedDownStatus');
+  const sgEl = document.getElementById('superGoalStatus');
+  const mgEl = document.getElementById('missGuardStatus');
+  const osEl = document.getElementById('obstacleSlowStatus');
+  const lbEl = document.getElementById('lineBoostStatus');
+  const cbEl = document.getElementById('coinBoostStatus');
+  const sbEl = document.getElementById('spawnBrakeStatus');
+  const ocEl = document.getElementById('obstacleClearStatus');
+  const sfEl = document.getElementById('slowFallStatus');
+  const waEl = document.getElementById('wallAssistStatus');
+  const lsEl = document.getElementById('lineShieldStatus');
+  const ldEl = document.getElementById('luckyDropStatus');
+  const mbEl = document.getElementById('miniBallStatus');
+  const srEl = document.getElementById('scoreRushStatus');
+  const rgEl = document.getElementById('rainbowGoalStatus');
+  const bfEl = document.getElementById('ballFreezeStatus');
+  if (sdEl) {
+    if (activeEffects.speedDown > now) {
+      const secs = Math.ceil((activeEffects.speedDown - now) / 1000);
+      sdEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      sdEl.style.color = '#00c2ff';
+    } else {
+      sdEl.querySelector('span').textContent = 'なし';
+      sdEl.style.color = '';
+    }
+  }
+  if (sgEl) {
+    if (activeEffects.superGoal > now) {
+      const secs = Math.ceil((activeEffects.superGoal - now) / 1000);
+      sgEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      sgEl.style.color = '#ff6bff';
+    } else {
+      sgEl.querySelector('span').textContent = 'なし';
+      sgEl.style.color = '';
+    }
+  }
+  const geEl = document.getElementById('goalExpandStatus');
+  if (geEl) {
+    geEl.querySelector('span').textContent = goalExpandItemActive ? '発動中' : 'なし';
+    geEl.style.color = goalExpandItemActive ? '#ffd700' : '';
+  }
+  if (mgEl) {
+    mgEl.querySelector('span').textContent = missGuardCharges > 0 ? `残り${missGuardCharges}回` : 'なし';
+    mgEl.style.color = missGuardCharges > 0 ? '#8bd3ff' : '';
+  }
+  if (osEl) {
+    if (activeEffects.obstacleSlow > now) {
+      const secs = Math.ceil((activeEffects.obstacleSlow - now) / 1000);
+      osEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      osEl.style.color = '#99ddff';
+    } else {
+      osEl.querySelector('span').textContent = 'なし';
+      osEl.style.color = '';
+    }
+  }
+  if (lbEl) {
+    if (activeEffects.lineBoost > now) {
+      const secs = Math.ceil((activeEffects.lineBoost - now) / 1000);
+      lbEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      lbEl.style.color = '#ffd27f';
+    } else {
+      lbEl.querySelector('span').textContent = 'なし';
+      lbEl.style.color = '';
+    }
+  }
+  if (cbEl) {
+    if (coinBoostStageActive) {
+      cbEl.querySelector('span').textContent = '発動中 (このステージ中)';
+      cbEl.style.color = '#ffcf66';
+    } else {
+      cbEl.querySelector('span').textContent = 'なし';
+      cbEl.style.color = '';
+    }
+  }
+  if (sbEl) {
+    if (activeEffects.spawnBrake > now) {
+      const secs = Math.ceil((activeEffects.spawnBrake - now) / 1000);
+      sbEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      sbEl.style.color = '#ff9b6f';
+    } else {
+      sbEl.querySelector('span').textContent = 'なし';
+      sbEl.style.color = '';
+    }
+  }
+  if (ocEl) {
+    if (activeEffects.obstacleClear > now) {
+      const secs = Math.ceil((activeEffects.obstacleClear - now) / 1000);
+      ocEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      ocEl.style.color = '#8ef0df';
+    } else {
+      ocEl.querySelector('span').textContent = 'なし';
+      ocEl.style.color = '';
+    }
+  }
+  if (sfEl) {
+    if (activeEffects.slowFall > now) {
+      const secs = Math.ceil((activeEffects.slowFall - now) / 1000);
+      sfEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      sfEl.style.color = '#c9f3ff';
+    } else {
+      sfEl.querySelector('span').textContent = 'なし';
+      sfEl.style.color = '';
+    }
+  }
+  if (waEl) {
+    if (activeEffects.wallAssist > now) {
+      const secs = Math.ceil((activeEffects.wallAssist - now) / 1000);
+      waEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      waEl.style.color = '#ffb786';
+    } else {
+      waEl.querySelector('span').textContent = 'なし';
+      waEl.style.color = '';
+    }
+  }
+  if (lsEl) {
+    if (activeEffects.lineShield > now) {
+      const secs = Math.ceil((activeEffects.lineShield - now) / 1000);
+      lsEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      lsEl.style.color = '#8ff3cf';
+    } else {
+      lsEl.querySelector('span').textContent = 'なし';
+      lsEl.style.color = '';
+    }
+  }
+  if (ldEl) {
+    if (luckyDropStages > 0) {
+      ldEl.querySelector('span').textContent = `発動中 (残り${luckyDropStages}ステージ)`;
+      ldEl.style.color = '#d8ff85';
+    } else {
+      ldEl.querySelector('span').textContent = 'なし';
+      ldEl.style.color = '';
+    }
+  }
+  if (mbEl) {
+    if (activeEffects.miniBall > now) {
+      const secs = Math.ceil((activeEffects.miniBall - now) / 1000);
+      mbEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      mbEl.style.color = '#9dd9ff';
+    } else {
+      mbEl.querySelector('span').textContent = 'なし';
+      mbEl.style.color = '';
+    }
+  }
+  if (srEl) {
+    if (activeEffects.scoreRush > now) {
+      const secs = Math.ceil((activeEffects.scoreRush - now) / 1000);
+      srEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      srEl.style.color = '#ffe07e';
+    } else {
+      srEl.querySelector('span').textContent = 'なし';
+      srEl.style.color = '';
+    }
+  }
+  if (rgEl) {
+    rgEl.querySelector('span').textContent = rainbowGoalStageActive ? '発動中 (このステージ中)' : 'なし';
+    rgEl.style.color = rainbowGoalStageActive ? '#ffb3ff' : '';
+  }
+  if (bfEl) {
+    if (activeEffects.ballFreeze > now) {
+      const secs = Math.ceil((activeEffects.ballFreeze - now) / 1000);
+      bfEl.querySelector('span').textContent = `発動中 (${secs}秒)`;
+      bfEl.style.color = '#aee5ff';
+    } else {
+      bfEl.querySelector('span').textContent = 'なし';
+      bfEl.style.color = '';
+    }
+  }
+}
+
+function addToStock(id) {
+  if (id === 'goalExpand') {
+    itemStocks.goalExpand += 1;
+  } else {
+    itemStocks[id] += 1;
+    const t = getPickupTypeById(id);
+    msgEl.textContent = `${t.emoji} ${t.label} をゲット! 右パネルから使えます。`;
+  }
+  refreshItemUI();
+  savePersistentState();
+}
+
+function activateEffect(id) {
+  if (id === 'goalExpand') {
+    itemStocks.goalExpand -= 1;
+    goalExpandItemActive = true;
+    updateGoalAtCurrentSpot();
+    msgEl.textContent = '⭐ ゴール拡大を使用! 次のステージまで有効。';
+  } else if (id === 'missGuard') {
+    itemStocks.missGuard -= 1;
+    missGuardCharges += 3;
+    msgEl.textContent = `🛡 ミスガードを使用! 次のミスを${missGuardCharges}回分防ぎます。`;
+  } else if (id === 'obstacleSlow') {
+    itemStocks.obstacleSlow -= 1;
+    activeEffects.obstacleSlow = Date.now() + PICKUP_DURATION;
+    msgEl.textContent = `🧊 障害物スローを使用! ${PICKUP_DURATION / 1000}秒間有効。`;
+  } else if (id === 'lineBoost') {
+    itemStocks.lineBoost -= 1;
+    activeEffects.lineBoost = Date.now() + PICKUP_DURATION;
+    msgEl.textContent = `📏 ラインブーストを使用! ${PICKUP_DURATION / 1000}秒間、最大8cmの線が引けます。`;
+  } else if (id === 'coinBoost') {
+    itemStocks.coinBoost -= 1;
+    coinBoostStageActive = true;
+    msgEl.textContent = '🧲 コインブーストを使用! このステージの間、ゴールごとに+2コイン。';
+  } else if (id === 'spawnBrake') {
+    itemStocks.spawnBrake -= 1;
+    activeEffects.spawnBrake = Date.now() + PICKUP_DURATION;
+    msgEl.textContent = `🚀 スポーンブレーキを使用! ${PICKUP_DURATION / 1000}秒間、同時ボール数が減少。`;
+  } else if (id === 'obstacleClear') {
+    itemStocks.obstacleClear -= 1;
+    activeEffects.obstacleClear = Date.now() + PICKUP_DURATION;
+    msgEl.textContent = `💨 障害物クリアを使用! ${PICKUP_DURATION / 1000}秒間、障害物との衝突を無効化。`;
+  } else if (id === 'slowFall') {
+    itemStocks.slowFall -= 1;
+    activeEffects.slowFall = Date.now() + PICKUP_DURATION;
+    msgEl.textContent = `🪂 スローフォールを使用! ${PICKUP_DURATION / 1000}秒間、落下がさらにゆっくり。`;
+  } else if (id === 'wallAssist') {
+    itemStocks.wallAssist -= 1;
+    activeEffects.wallAssist = Date.now() + PICKUP_DURATION;
+    msgEl.textContent = `🧱 ウォールサポートを使用! ${PICKUP_DURATION / 1000}秒間、壁で跳ね返りやすくなります。`;
+  } else if (id === 'lineShield') {
+    itemStocks.lineShield -= 1;
+    activeEffects.lineShield = Date.now() + PICKUP_DURATION;
+    msgEl.textContent = `🧵 ラインシールドを使用! ${PICKUP_DURATION / 1000}秒間、線に当たりやすくなります。`;
+  } else if (id === 'luckyDrop') {
+    itemStocks.luckyDrop -= 1;
+    luckyDropStages += 2;
+    luckyDropStageMarker = stage;
+    msgEl.textContent = `🍀 ラッキードロップを使用! 残り${luckyDropStages}ステージの間、アイテム出現が増えます。`;
+  } else if (id === 'miniBall') {
+    itemStocks.miniBall -= 1;
+    activeEffects.miniBall = Date.now() + PICKUP_DURATION;
+    msgEl.textContent = `🔹 ミニボールを使用! ${PICKUP_DURATION / 1000}秒間、ボールが小さくなります。`;
+  } else if (id === 'scoreRush') {
+    itemStocks.scoreRush -= 1;
+    activeEffects.scoreRush = Date.now() + PICKUP_DURATION;
+    msgEl.textContent = `⚡ スコアラッシュを使用! ${PICKUP_DURATION / 1000}秒間、1ゴールで2点入ります。`;
+  } else if (id === 'rainbowGoal') {
+    itemStocks.rainbowGoal -= 1;
+    rainbowGoalStageActive = true;
+    updateGoalAtCurrentSpot();
+    msgEl.textContent = '🌈 レインボーゴールを使用! このステージの間、ゴールがさらに広がります。';
+  } else if (id === 'ballFreeze') {
+    itemStocks.ballFreeze -= 1;
+    activeEffects.ballFreeze = Date.now() + PICKUP_DURATION;
+    msgEl.textContent = `🧊 ボールフリーズを使用! ${PICKUP_DURATION / 1000}秒間、ボールの速度が落ちます。`;
+  } else {
+    itemStocks[id] -= 1;
+    activeEffects[id] = Date.now() + PICKUP_DURATION;
+    if (id === 'superGoal') updateGoalAtCurrentSpot();
+    const t = getPickupTypeById(id);
+    msgEl.textContent = `${t.emoji} ${t.label} を使用! ${PICKUP_DURATION / 1000}秒間有効。`;
+  }
+  refreshItemUI();
+  refreshEffectUI();
+  savePersistentState();
+}
+
+function trySpawnPickup() {
+  const types = getAvailablePickupTypes();
+  const spawnCount = luckyDropStages > 0 ? 2 : 1;
+  for (let i = 0; i < spawnCount; i++) {
+    if (pickupItems.length >= 5) break;
+    const type = types[Math.floor(Math.random() * types.length)];
+    pickupItems.push({
+      x: 60 + Math.random() * (canvas.width - 120),
+      y: 80 + Math.random() * (canvas.height - 220),
+      type,
+      r: 22,
+      born: Date.now()
+    });
+  }
+}
+
+function drawPickupItems() {
+  const now = Date.now();
+  for (let i = pickupItems.length - 1; i >= 0; i--) {
+    const item = pickupItems[i];
+    const age  = now - item.born;
+    if (age > PICKUP_LIFESPAN) { pickupItems.splice(i, 1); continue; }
+    const fade = age > PICKUP_LIFESPAN * 0.7
+      ? 1 - (age - PICKUP_LIFESPAN * 0.7) / (PICKUP_LIFESPAN * 0.3)
+      : 1;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.shadowColor  = item.type.color;
+    ctx.shadowBlur   = 18;
+    ctx.beginPath();
+    ctx.arc(item.x, item.y, item.r, 0, Math.PI * 2);
+    ctx.fillStyle    = item.type.color + '33';
+    ctx.fill();
+    ctx.strokeStyle  = item.type.color;
+    ctx.lineWidth    = 2.5;
+    ctx.stroke();
+    ctx.shadowBlur   = 0;
+    ctx.font         = '18px Arial';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle    = '#fff';
+    ctx.fillText(item.type.emoji, item.x, item.y);
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign    = 'left';
+    ctx.restore();
+  }
+}
+/* ─── ゴール ─────────────────────────── */
+const BASE_GOAL_W = 140;
+const ITEM_GOAL_W = 220;
+const GOAL_H = 28;
+const goalSpots = [
+  { x: 40, y: 495 },
+  { x: 240, y: 495 },
+  { x: 430, y: 495 },
+  { x: 620, y: 495 },
+  { x: 810, y: 495 },
+  { x: 140, y: 460 },
+  { x: 370, y: 460 },
+  { x: 590, y: 460 },
+  { x: 780, y: 460 },
+  { x: 430, y: 425 }
+];
+const OBSTACLE_LAYOUTS = [
+  [
+    { x: 170, y: 180, r: 22, vx: 1.1, vy: 0, minX: 120, maxX: 240, minY: 180, maxY: 180 },
+    { x: 420, y: 245, r: 26, vx: 0, vy: 1.0, minX: 420, maxX: 420, minY: 200, maxY: 310 },
+    { x: 690, y: 190, r: 22, vx: -1.2, vy: 0, minX: 620, maxX: 760, minY: 190, maxY: 190 },
+    { x: 830, y: 320, r: 24, vx: 0, vy: -0.9, minX: 830, maxX: 830, minY: 250, maxY: 370 },
+    { x: 285, y: 360, r: 20, vx: 0.9, vy: 0, minX: 230, maxX: 360, minY: 360, maxY: 360 }
+  ],
+  [
+    { x: 130, y: 220, r: 24, vx: 1.3, vy: 0, minX: 80, maxX: 240, minY: 220, maxY: 220 },
+    { x: 340, y: 160, r: 21, vx: 0, vy: 1.1, minX: 340, maxX: 340, minY: 120, maxY: 250 },
+    { x: 535, y: 300, r: 28, vx: -1.0, vy: 0, minX: 460, maxX: 620, minY: 300, maxY: 300 },
+    { x: 760, y: 180, r: 22, vx: 0, vy: 1.2, minX: 760, maxX: 760, minY: 130, maxY: 290 },
+    { x: 860, y: 345, r: 20, vx: -1.1, vy: 0, minX: 760, maxX: 900, minY: 345, maxY: 345 }
+  ],
+  [
+    { x: 200, y: 150, r: 22, vx: 0, vy: 1.1, minX: 200, maxX: 200, minY: 110, maxY: 240 },
+    { x: 420, y: 220, r: 24, vx: 1.4, vy: 0, minX: 330, maxX: 520, minY: 220, maxY: 220 },
+    { x: 620, y: 150, r: 20, vx: 0, vy: 1.0, minX: 620, maxX: 620, minY: 110, maxY: 250 },
+    { x: 760, y: 290, r: 28, vx: -1.2, vy: 0, minX: 660, maxX: 860, minY: 290, maxY: 290 },
+    { x: 310, y: 390, r: 22, vx: 1.0, vy: 0, minX: 220, maxX: 400, minY: 390, maxY: 390 }
+  ]
+];
+let obstacles = [];
+let goalSpotIndex = ((stage - 1) * 3 + 1) % goalSpots.length;
+let GOAL = { x: goalSpots[goalSpotIndex].x, y: goalSpots[goalSpotIndex].y, w: BASE_GOAL_W, h: GOAL_H };
+
+function setGoalSpotForStage() {
+  goalSpotIndex = ((stage - 1) * 3 + 1) % goalSpots.length;
+}
+
+function resetObstaclesForStage() {
+  const layout = OBSTACLE_LAYOUTS[(stage - 1) % OBSTACLE_LAYOUTS.length];
+
+  if (stage < 15) {
+    obstacles = layout.map(obstacle => ({
+      ...obstacle,
+      x: obstacle.x,
+      y: obstacle.y,
+      vx: obstacle.vx * obstacleSpeedBoostByStage,
+      vy: obstacle.vy * obstacleSpeedBoostByStage
+    }));
+    return;
+  }
+
+  const targetCount = 15;
+  const stageSeed = (stage - 1) * 17;
+
+  obstacles = Array.from({ length: targetCount }, (_, i) => {
+    const base = layout[i % layout.length];
+    const lane = i % 5;
+    const band = Math.floor(i / 5);
+
+    const jitterX = ((stageSeed + i * 23) % 41) - 20;
+    const jitterY = ((stageSeed + i * 31) % 51) - 25;
+    const centerX = Math.max(70, Math.min(canvas.width - 70, 110 + lane * 185 + jitterX));
+    const centerY = Math.max(90, Math.min(canvas.height - 150, 130 + band * 120 + jitterY));
+    const moveRange = 50 + ((i * 13 + stage * 7) % 35);
+    const horizontalMove = (i + stage) % 2 === 0;
+    const direction = (i + stage) % 3 === 0 ? -1 : 1;
+    const speed = (0.75 + ((i * 7 + stage) % 18) / 20) * obstacleSpeedBoostByStage;
+    const radius = Math.max(16, base.r + ((i + stage) % 5) - 2);
+
+    if (horizontalMove) {
+      return {
+        ...base,
+        r: radius,
+        x: centerX,
+        y: centerY,
+        vx: speed * direction,
+        vy: 0,
+        minX: Math.max(radius + 12, centerX - moveRange),
+        maxX: Math.min(canvas.width - radius - 12, centerX + moveRange),
+        minY: centerY,
+        maxY: centerY
+      };
+    }
+
+    return {
+      ...base,
+      r: radius,
+      x: centerX,
+      y: centerY,
+      vx: 0,
+      vy: speed * direction,
+      minX: centerX,
+      maxX: centerX,
+      minY: Math.max(radius + 12, centerY - moveRange),
+      maxY: Math.min(canvas.height - radius - 90, centerY + moveRange)
+    };
+  });
+}
+
+function updateObstacles() {
+  const obstacleSlowFactor = activeEffects.obstacleSlow > Date.now() ? 0.45 : 1;
+  for (const obstacle of obstacles) {
+    obstacle.x += obstacle.vx * obstacleSlowFactor;
+    obstacle.y += obstacle.vy * obstacleSlowFactor;
+
+    if (obstacle.minX !== obstacle.maxX && (obstacle.x < obstacle.minX || obstacle.x > obstacle.maxX)) {
+      obstacle.vx *= -1;
+      obstacle.x = Math.max(obstacle.minX, Math.min(obstacle.x, obstacle.maxX));
+    }
+    if (obstacle.minY !== obstacle.maxY && (obstacle.y < obstacle.minY || obstacle.y > obstacle.maxY)) {
+      obstacle.vy *= -1;
+      obstacle.y = Math.max(obstacle.minY, Math.min(obstacle.y, obstacle.maxY));
+    }
+  }
+}
+
+function updateGoalAtCurrentSpot() {
+  const spot = goalSpots[goalSpotIndex];
+  let goalWidth;
+  if (activeEffects.superGoal > Date.now())   goalWidth = SUPER_GOAL_W;
+  else if (goalExpandItemActive)               goalWidth = ITEM_GOAL_W;
+  else                                         goalWidth = goalWidthByStage;
+  if (rainbowGoalStageActive)                  goalWidth += 90;
+  const clampedX = Math.max(0, Math.min(spot.x, canvas.width - goalWidth));
+  GOAL = { x: clampedX, y: spot.y, w: goalWidth, h: GOAL_H };
+}
+
+function updateStageAndGoal() {
+  if (isGameOver || isGameClear) return;
+  if (score < 10) return;
+
+  const stageMisses = getCurrentStageMisses();
+  const rewardCoins = 20 - stageMisses;
+  goalExpandItemActive = false;
+  coinBoostStageActive = false;
+  rainbowGoalStageActive = false;
+
+  coins += rewardCoins;
+
+  updateCoinUI();
+
+  if (stageMisses <= 5) {
+    addToStock('goalExpand');
+    msgEl.textContent = `ステージクリア報酬: ${rewardCoins}コイン + ⭐ ゴール拡大をゲット!`;
+  } else {
+    msgEl.textContent = `ステージクリア報酬: ${rewardCoins}コインをゲット!`;
+  }
+
+  refreshItemUI();
+  savePersistentState();
+  triggerGameClear();
+}
+
+/* ─── パーティクル ─────────────────────── */
+function spawnParticles(x, y, color) {
+  for (let i = 0; i < 22; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 4;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1.0,
+      color,
+      r: 3 + Math.random() * 4
+    });
+  }
+}
+
+/* ─── ボール クラス / ゲーム定数 ──────────── */
+const BALL_RADIUS    = 13;
+const GRAVITY_NORMAL = 0.35;
+const GRAVITY_SLOW   = 0.12;
+const FRICTION       = 0.988;
+const RESTITUTION    = 0.42;
+const SUPER_GOAL_W    = 380;
+const PICKUP_DURATION = 12000;
+const PICKUP_LIFESPAN = 9000;
+const stageDifficulty = (stage - 1) / 29;
+const stage20Ramp = stage >= 20 ? Math.pow((stage - 20) / 10, 2.2) : 0;
+const goalWidthByStage = Math.max(78, Math.round(BASE_GOAL_W - stageDifficulty * 30 - stage20Ramp * 36));
+const gravityMultiplierByStage = 1 + stageDifficulty * 0.28 + stage20Ramp * 0.95;
+const obstacleSpeedBoostByStage = 1 + stageDifficulty * 0.55 + stage20Ramp * 1.3;
+const maxActiveBallsByStage = 4 + Math.floor(stageDifficulty * 3) + Math.floor(stage20Ramp * 4);
+const ballSpawnIntervalByStage = Math.max(650, Math.round(2800 - stageDifficulty * 900 - stage20Ramp * 1250));
+const PICKUP_TYPES = [
+  { id: 'speedDown', label: 'ボール速度ダウン', emoji: '🐢', color: '#00c2ff' },
+  { id: 'superGoal', label: 'ゴール超拡大',    emoji: '🎯', color: '#ff6bff' },
+  { id: 'missGuard', label: 'ミスガード',      emoji: '🛡', color: '#7fc8ff' },
+  { id: 'obstacleSlow', label: '障害物スロー', emoji: '🧊', color: '#8ad9ff' },
+  { id: 'lineBoost', label: 'ラインブースト',  emoji: '📏', color: '#ffcc80' },
+  { id: 'coinBoost', label: 'コインブースト',  emoji: '🧲', color: '#ffcf66' },
+  { id: 'spawnBrake', label: 'スポーンブレーキ', emoji: '🚀', color: '#ff9b6f' },
+  { id: 'obstacleClear', label: '障害物クリア', emoji: '💨', color: '#8ef0df' },
+  { id: 'slowFall', label: 'スローフォール', emoji: '🪂', color: '#c9f3ff' }
+];
+const GACHA_PICKUP_TYPES = {
+  wallAssist: { id: 'wallAssist', label: 'ウォールサポート', emoji: '🧱', color: '#ffb786' },
+  lineShield: { id: 'lineShield', label: 'ラインシールド', emoji: '🧵', color: '#8ff3cf' },
+  luckyDrop: { id: 'luckyDrop', label: 'ラッキードロップ', emoji: '🍀', color: '#d8ff85' },
+  miniBall: { id: 'miniBall', label: 'ミニボール', emoji: '🔹', color: '#9dd9ff' },
+  scoreRush: { id: 'scoreRush', label: 'スコアラッシュ', emoji: '⚡', color: '#ffe07e' },
+  rainbowGoal: { id: 'rainbowGoal', label: 'レインボーゴール', emoji: '🌈', color: '#ff9ce6' },
+  ballFreeze: { id: 'ballFreeze', label: 'ボールフリーズ', emoji: '🧊', color: '#aee5ff' }
+};
+
+function getAvailablePickupTypes() {
+  const list = [...PICKUP_TYPES];
+  if (unlockedItems.wallAssist) list.push(GACHA_PICKUP_TYPES.wallAssist);
+  if (unlockedItems.lineShield) list.push(GACHA_PICKUP_TYPES.lineShield);
+  if (unlockedItems.luckyDrop) list.push(GACHA_PICKUP_TYPES.luckyDrop);
+  if (unlockedItems.miniBall) list.push(GACHA_PICKUP_TYPES.miniBall);
+  if (unlockedItems.scoreRush) list.push(GACHA_PICKUP_TYPES.scoreRush);
+  if (unlockedItems.rainbowGoal) list.push(GACHA_PICKUP_TYPES.rainbowGoal);
+  if (unlockedItems.ballFreeze) list.push(GACHA_PICKUP_TYPES.ballFreeze);
+  return list;
+}
+
+function getPickupTypeById(id) {
+  return getAvailablePickupTypes().find(p => p.id === id);
+}
+
+class Ball {
+  constructor() {
+    this.x  = 60 + Math.random() * (canvas.width - 120);
+    this.y  = -BALL_RADIUS;
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = 0;
+    this.r  = BALL_RADIUS;
+    this.active = true;
+    this.hue = Math.floor(Math.random() * 360);
+    this.color = `hsl(${this.hue},85%,60%)`;
+  }
+
+  update() {
+    if (!this.active || isGameOver || isGameClear) return;
+    const now = Date.now();
+    this.r = activeEffects.miniBall > now ? BALL_RADIUS * 0.72 : BALL_RADIUS;
+
+    const useSlowGravity = activeEffects.speedDown > now || activeEffects.slowFall > now;
+    const gravityBase = useSlowGravity ? GRAVITY_SLOW : GRAVITY_NORMAL;
+    const slowFallFactor = activeEffects.slowFall > now ? 0.6 : 1;
+    this.vy += gravityBase * gravityMultiplierByStage * slowFallFactor;
+    if (activeEffects.ballFreeze > now) {
+      this.vx *= 0.86;
+      this.vy *= 0.92;
+    }
+    this.vx *= FRICTION;
+    this.x  += this.vx;
+    this.y  += this.vy;
+
+    /* 壁 */
+    if (this.x - this.r < 0) {
+      this.x = this.r;
+      const wallBounce = activeEffects.wallAssist > now ? 0.9 : 0.7;
+      this.vx = Math.abs(this.vx) * wallBounce;
+    }
+    if (this.x + this.r > canvas.width) {
+      this.x = canvas.width - this.r;
+      const wallBounce = activeEffects.wallAssist > now ? 0.9 : 0.7;
+      this.vx = -Math.abs(this.vx) * wallBounce;
+    }
+
+    /* 線との衝突 */
+    for (const ln of lines) collideSegment(this, ln);
+
+    /* 邪魔者との衝突 */
+    if (activeEffects.obstacleClear <= Date.now()) {
+      for (const obstacle of obstacles) collideObstacle(this, obstacle);
+    }
+
+    /* ピックアップアイテム衝突 → 在庫に追加 */
+    for (let i = pickupItems.length - 1; i >= 0; i--) {
+      const pi  = pickupItems[i];
+      const pdx = this.x - pi.x;
+      const pdy = this.y - pi.y;
+      if (pdx * pdx + pdy * pdy < (this.r + pi.r) * (this.r + pi.r)) {
+        addToStock(pi.type.id);
+        pickupItems.splice(i, 1);
+        break;
+      }
+    }
+
+    /* ゴール判定 */
+    if (
+      this.y + this.r > GOAL.y &&
+      this.y - this.r < GOAL.y + GOAL.h &&
+      this.x > GOAL.x + 6 &&
+      this.x < GOAL.x + GOAL.w - 6
+    ) {
+      const goalYOnHit = GOAL.y;
+      this.active = false;
+      score += activeEffects.scoreRush > now ? 2 : 1;
+      if (score > 10) score = 10;
+      scoreEl.textContent = score;
+      if (coinBoostStageActive) {
+        coins += 2;
+        updateCoinUI();
+      }
+      updateStageAndGoal();
+      savePersistentState();
+      spawnParticles(this.x, goalYOnHit, this.color);
+    }
+
+    /* 画面外（下） */
+    if (this.y - this.r > canvas.height) {
+      this.active = false;
+      if (missGuardCharges > 0) {
+        missGuardCharges -= 1;
+        msgEl.textContent = `🛡 ミスガード発動! ミスを無効化（残り${missGuardCharges}回）`;
+        refreshEffectUI();
+      } else {
+        miss++;
+        missEl.textContent = miss;
+        if (getCurrentStageMisses() >= 15) {
+          triggerGameOver();
+        }
+      }
+    }
+  }
+
+  draw() {
+    if (!this.active) return;
+    ctx.save();
+    ctx.shadowColor  = this.color;
+    ctx.shadowBlur   = 14;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+
+    /* グラデーション */
+    const grd = ctx.createRadialGradient(
+      this.x - this.r * 0.3, this.y - this.r * 0.3, this.r * 0.1,
+      this.x, this.y, this.r
+    );
+    grd.addColorStop(0, `hsl(${this.hue},90%,80%)`);
+    grd.addColorStop(1, `hsl(${this.hue},85%,40%)`);
+
+    ctx.fillStyle = grd;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/* ─── 線分との衝突検出 ──────────────────── */
+function collideSegment(ball, ln) {
+  const dx = ln.x2 - ln.x1;
+  const dy = ln.y2 - ln.y1;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return;
+
+  const t = Math.max(0, Math.min(1,
+    ((ball.x - ln.x1) * dx + (ball.y - ln.y1) * dy) / len2
+  ));
+  const cx = ln.x1 + t * dx;
+  const cy = ln.y1 + t * dy;
+  const ex = ball.x - cx;
+  const ey = ball.y - cy;
+  const dist = Math.sqrt(ex * ex + ey * ey);
+
+  const lineBonus = activeEffects.lineShield > Date.now() ? 5 : 0;
+  const hitRadius = ball.r + lineBonus;
+  if (dist < hitRadius && dist > 0) {
+    const nx = ex / dist;
+    const ny = ey / dist;
+
+    /* 押し出し */
+    const overlap = hitRadius - dist;
+    ball.x += nx * overlap;
+    ball.y += ny * overlap;
+
+    /* 反射 */
+    const dot = ball.vx * nx + ball.vy * ny;
+    if (dot < 0) {
+      ball.vx -= (1 + RESTITUTION) * dot * nx;
+      ball.vy -= (1 + RESTITUTION) * dot * ny;
+      ball.vx *= 0.96;
+      ball.vy *= 0.96;
+    }
+  }
+}
+
+function collideObstacle(ball, obstacle) {
+  const dx = ball.x - obstacle.x;
+  const dy = ball.y - obstacle.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const minDistance = ball.r + obstacle.r;
+
+  if (distance >= minDistance || distance === 0) return;
+
+  const nx = dx / distance;
+  const ny = dy / distance;
+  const overlap = minDistance - distance;
+
+  ball.x += nx * overlap;
+  ball.y += ny * overlap;
+
+  const dot = ball.vx * nx + ball.vy * ny;
+  if (dot < 0) {
+    ball.vx -= (1 + 1.25) * dot * nx;
+    ball.vy -= (1 + 1.25) * dot * ny;
+    ball.vx *= 1.01;
+    ball.vy *= 1.01;
+  }
+}
+
+/* ─── 線を描画 ──────────────────────────── */
+function drawLines() {
+  ctx.lineCap  = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 7;
+
+  for (const ln of lines) {
+    ctx.beginPath();
+    ctx.moveTo(ln.x1, ln.y1);
+    ctx.lineTo(ln.x2, ln.y2);
+    ctx.strokeStyle = '#4ecdc4';
+    ctx.shadowColor  = '#4ecdc4';
+    ctx.shadowBlur   = 8;
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+
+  /* 描画中のプレビュー */
+  if (isDrawing && drawStart && drawCurrent) {
+    ctx.beginPath();
+    ctx.moveTo(drawStart.x, drawStart.y);
+    ctx.lineTo(drawCurrent.x, drawCurrent.y);
+    ctx.strokeStyle = 'rgba(78,205,196,0.45)';
+    ctx.lineWidth   = 7;
+    ctx.shadowBlur  = 0;
+    ctx.stroke();
+  }
+}
+
+function drawObstacles() {
+  if (activeEffects.obstacleClear > Date.now()) {
+    return;
+  }
+  for (const obstacle of obstacles) {
+    ctx.save();
+    ctx.shadowColor = '#ff7a7a';
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.arc(obstacle.x, obstacle.y, obstacle.r, 0, Math.PI * 2);
+    const grd = ctx.createRadialGradient(
+      obstacle.x - obstacle.r * 0.35,
+      obstacle.y - obstacle.r * 0.35,
+      obstacle.r * 0.2,
+      obstacle.x,
+      obstacle.y,
+      obstacle.r
+    );
+    grd.addColorStop(0, '#ffd0d0');
+    grd.addColorStop(1, '#d9485f');
+    ctx.fillStyle = grd;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/* ─── ゴール描画 ────────────────────────── */
+function drawGoal() {
+  const { x, y, w, h } = GOAL;
+
+  /* 内側 */
+  ctx.fillStyle = 'rgba(255,215,0,0.18)';
+  ctx.fillRect(x + 6, y, w - 12, h);
+
+  /* ゴール枠 */
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth   = 4;
+  ctx.shadowColor  = '#ffd700';
+  ctx.shadowBlur   = 12;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y + h);
+  ctx.moveTo(x + w, y);
+  ctx.lineTo(x + w, y + h);
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w, y);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  /* ラベル */
+  ctx.fillStyle   = '#ffd700';
+  ctx.font        = 'bold 15px Arial';
+  ctx.textAlign   = 'center';
+  ctx.shadowColor = '#ffd700';
+  ctx.shadowBlur  = 8;
+  ctx.fillText('⚽ GOAL', x + w / 2, y + h - 5);
+  ctx.shadowBlur  = 0;
+  ctx.textAlign   = 'left';
+}
+
+/* ─── パーティクル描画 ────────────────────── */
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x  += p.vx;
+    p.y  += p.vy;
+    p.vy += 0.12;
+    p.life -= 0.028;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+
+    ctx.globalAlpha = p.life;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fillStyle   = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur  = 6;
+    ctx.fill();
+    ctx.shadowBlur  = 0;
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ─── マウスイベント ────────────────────── */
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top)  * scaleY
+  };
+}
+
+const MAX_LINE_CM = 5;
+const BOOST_LINE_CM = 8;
+const CSS_PX_PER_CM = 96 / 2.54;
+
+function getMaxLineLengthCanvasPx() {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const avgScale = (scaleX + scaleY) / 2;
+  const lineCm = activeEffects.lineBoost > Date.now() ? BOOST_LINE_CM : MAX_LINE_CM;
+  return lineCm * CSS_PX_PER_CM * avgScale;
+}
+
+canvas.addEventListener('mousedown', e => {
+  if (isGameOver || isGameClear) return;
+  isDrawing   = true;
+  drawStart   = getPos(e);
+  drawCurrent = { ...drawStart };
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!isDrawing || isGameOver || isGameClear) return;
+  drawCurrent = getPos(e);
+});
+
+function endDraw() {
+  if (isGameOver || isGameClear) return;
+  if (isDrawing && drawStart && drawCurrent) {
+    const dx = drawCurrent.x - drawStart.x;
+    const dy = drawCurrent.y - drawStart.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len > 10) {
+      const maxLen = getMaxLineLengthCanvasPx();
+      const ratio = len > maxLen ? maxLen / len : 1;
+      const endX = drawStart.x + dx * ratio;
+      const endY = drawStart.y + dy * ratio;
+      lines.push({ x1: drawStart.x, y1: drawStart.y, x2: endX, y2: endY });
+      if (ratio < 1) {
+        msgEl.textContent = activeEffects.lineBoost > Date.now()
+          ? 'ラインブースト中の最大は8cmです。長い線は自動で短くなります。'
+          : '線の長さは最大5cmです。長い線は自動で短くなります。';
+      }
+    }
+  }
+  isDrawing   = false;
+  drawStart   = null;
+  drawCurrent = null;
+}
+canvas.addEventListener('mouseup',    endDraw);
+canvas.addEventListener('mouseleave', endDraw);
+
+/* タッチ対応 */
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (isGameOver || isGameClear) return;
+  isDrawing = true;
+  drawStart = getPos(e.touches[0]);
+  drawCurrent = { ...drawStart };
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!isDrawing || isGameOver || isGameClear) return;
+  drawCurrent = getPos(e.touches[0]);
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => { e.preventDefault(); endDraw(); }, { passive: false });
+
+/* ─── ボタン ──────────────────────────── */
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (isGameOver || isGameClear) return;
+  lines = [];
+});
+document.getElementById('undoBtn').addEventListener('click', () => {
+  if (isGameOver || isGameClear) return;
+  lines.pop();
+});
+restartBtn.addEventListener('click', restartGame);
+
+document.querySelectorAll('.use-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.item;
+    if (btn.disabled) return;
+    activateEffect(key);
+  });
+});
+
+/* ─── ボールを定期スポーン ──────────────── */
+setInterval(() => {
+  if (isGameOver || isGameClear) return;
+  const spawnCap = activeEffects.spawnBrake > Date.now()
+    ? Math.max(2, maxActiveBallsByStage - 3)
+    : maxActiveBallsByStage;
+  if (balls.filter(b => b.active).length < spawnCap) {
+    balls.push(new Ball());
+  }
+}, ballSpawnIntervalByStage);
+balls.push(new Ball());
+loadPersistentState();
+updateCoinUI();
+refreshItemUI();
+resetObstaclesForStage();
+
+/* ─── ピックアップアイテムをランダムスポーン ── */
+(function scheduleNextPickup() {
+  setTimeout(() => {
+    if (isGameOver || isGameClear) return;
+    if (pickupItems.length < 3) trySpawnPickup();
+    scheduleNextPickup();
+  }, 4000 + Math.random() * 4000);
+})();
+
+setInterval(refreshEffectUI, 500);
+
+/* ─── ゲームループ ────────────────────── */
+function loop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  /* 背景グリッド（薄） */
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth   = 1;
+  for (let gx = 0; gx < canvas.width; gx += 40) {
+    ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, canvas.height); ctx.stroke();
+  }
+  for (let gy = 0; gy < canvas.height; gy += 40) {
+    ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(canvas.width, gy); ctx.stroke();
+  }
+
+  /* スポーン表示 */
+  ctx.fillStyle   = 'rgba(255,255,255,0.15)';
+  ctx.font        = '13px Arial';
+  ctx.textAlign   = 'center';
+  ctx.fillText('▼ ボール落下エリア ▼', canvas.width / 2, 20);
+  ctx.textAlign   = 'left';
+
+  updateObstacles();
+  drawLines();
+  drawObstacles();
+  drawPickupItems();
+  drawGoal();
+
+  balls = balls.filter(b => b.active || b.y < canvas.height + 40);
+  for (const b of balls) { b.update(); b.draw(); }
+
+  updateParticles();
+
+  /* エフェクト期限チェック */
+  const fNow = Date.now();
+  if (activeEffects.superGoal !== 0 && activeEffects.superGoal < fNow) {
+    activeEffects.superGoal = 0;
+    updateGoalAtCurrentSpot();
+  }
+  if (activeEffects.obstacleSlow !== 0 && activeEffects.obstacleSlow < fNow) {
+    activeEffects.obstacleSlow = 0;
+  }
+  if (activeEffects.lineBoost !== 0 && activeEffects.lineBoost < fNow) {
+    activeEffects.lineBoost = 0;
+  }
+  if (activeEffects.spawnBrake !== 0 && activeEffects.spawnBrake < fNow) {
+    activeEffects.spawnBrake = 0;
+  }
+  if (activeEffects.obstacleClear !== 0 && activeEffects.obstacleClear < fNow) {
+    activeEffects.obstacleClear = 0;
+  }
+  if (activeEffects.slowFall !== 0 && activeEffects.slowFall < fNow) {
+    activeEffects.slowFall = 0;
+  }
+  if (activeEffects.wallAssist !== 0 && activeEffects.wallAssist < fNow) {
+    activeEffects.wallAssist = 0;
+  }
+  if (activeEffects.lineShield !== 0 && activeEffects.lineShield < fNow) {
+    activeEffects.lineShield = 0;
+  }
+  if (activeEffects.miniBall !== 0 && activeEffects.miniBall < fNow) {
+    activeEffects.miniBall = 0;
+  }
+  if (activeEffects.scoreRush !== 0 && activeEffects.scoreRush < fNow) {
+    activeEffects.scoreRush = 0;
+  }
+  if (activeEffects.ballFreeze !== 0 && activeEffects.ballFreeze < fNow) {
+    activeEffects.ballFreeze = 0;
+  }
+
+  if (isGameOver) {
+    ctx.fillStyle = 'rgba(5, 8, 18, 0.72)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ff6b6b';
+    ctx.font = 'bold 42px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '20px Arial';
+    ctx.fillText(`ステージ${stage}で15ミス到達`, canvas.width / 2, canvas.height / 2 + 18);
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  if (isGameClear) {
+    ctx.fillStyle = 'rgba(5, 20, 12, 0.72)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#7dff8f';
+    ctx.font = 'bold 42px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME CLEAR', canvas.width / 2, canvas.height / 2 - 20);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '20px Arial';
+    ctx.fillText(`ステージ${stage}を10ゴール達成!`, canvas.width / 2, canvas.height / 2 + 18);
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  requestAnimationFrame(loop);
+}
+
+stageEl.textContent = stage;
+loop();
+</script>
+</body>
+</html>

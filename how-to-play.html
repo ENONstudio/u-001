@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>遊び方</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: "Hiragino Sans", "Yu Gothic UI", sans-serif;
+      color: #f3f7ff;
+      background: linear-gradient(160deg, #101422, #27344a);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .panel {
+      width: min(820px, 100%);
+      background: rgba(8, 16, 30, 0.78);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 22px;
+      padding: 24px;
+    }
+    h1 { font-size: 34px; margin-bottom: 12px; }
+    ol { padding-left: 20px; display: grid; gap: 10px; color: #c9d8ef; line-height: 1.8; }
+    .tips {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(68, 217, 182, 0.09);
+      border: 1px solid rgba(68, 217, 182, 0.2);
+      color: #a8e8da;
+    }
+    .btns { margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap; }
+    a {
+      text-decoration: none;
+      padding: 11px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .primary { background: #ffd24c; color: #221800; }
+    .sub { background: rgba(255,255,255,0.08); color: #f3f7ff; border: 1px solid rgba(255,255,255,0.08); }
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <h1>遊び方</h1>
+    <ol>
+      <li>上から落ちるボールを、ドラッグで描いた線の上に乗せます。</li>
+      <li>ボールを下のゴールに入れるとスコアが増えます。</li>
+      <li>10スコアごとにステージが進み、ゴール位置と障害物が変化します。</li>
+      <li>1ステージで15ミスするとゲームオーバーです。</li>
+      <li>アイテムは右パネルから種類を選んで使用できます。</li>
+    </ol>
+
+    <div class="tips">コツ: 線は短く複数本でつなぐと、障害物の動きに合わせて調整しやすくなります。</div>
+
+    <div class="btns">
+      <a class="primary" href="ボール入れゲーム１.html">今すぐ遊ぶ</a>
+      <a class="sub" href="shop.html">ショップへ</a>
+      <a class="sub" href="index.html">ホームへ</a>
+    </div>
+  </main>
+</body>
+</html>
